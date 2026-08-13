@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
+import '../../data/vehicle_catalog.dart';
 import '../../models/models.dart';
 import '../../services/api_service.dart';
 import '../../widgets/aero/aero_background.dart';
@@ -36,98 +37,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _addVehicleSheet() async {
-    final makeCtrl = TextEditingController();
-    final modelCtrl = TextEditingController();
-    final regCtrl = TextEditingController();
-    String connectorType = 'CCS2';
-
-    await showModalBottomSheet(
+    final added = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            final canSave = makeCtrl.text.trim().isNotEmpty && modelCtrl.text.trim().isNotEmpty;
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: AppColors.chromeMist,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Add a vehicle', style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
-                  const SizedBox(height: 18),
-                  TextField(
-                    controller: makeCtrl,
-                    onChanged: (_) => setSheetState(() {}),
-                    decoration: const InputDecoration(hintText: 'Make (e.g. Tata) *'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: modelCtrl,
-                    onChanged: (_) => setSheetState(() {}),
-                    decoration: const InputDecoration(hintText: 'Model (e.g. Nexon EV) *'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(controller: regCtrl, decoration: const InputDecoration(hintText: 'Registration number (optional)')),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: ['CCS2', 'CHAdeMO', 'Type2', 'GBT'].map((type) {
-                      final sel = connectorType == type;
-                      return ChoiceChip(
-                        label: Text(type),
-                        selected: sel,
-                        onSelected: (_) => setSheetState(() => connectorType = type),
-                        selectedColor: AppColors.skyBlue,
-                        labelStyle: GoogleFonts.nunitoSans(color: sel ? Colors.white : AppColors.deepAzure, fontWeight: FontWeight.w700),
-                        backgroundColor: Colors.white,
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('* Make and model are required', style: GoogleFonts.nunitoSans(fontSize: 12, color: AppColors.textMuted)),
-                  const SizedBox(height: 12),
-                  EnergyOrbButton(
-                    label: 'Save vehicle',
-                    icon: Icons.directions_car_filled_rounded,
-                    green: true,
-                    width: double.infinity,
-                    onPressed: !canSave
-                        ? null
-                        : () async {
-                            final make = makeCtrl.text.trim();
-                            final model = modelCtrl.text.trim();
-                            final regNumber = regCtrl.text.trim();
-                            Navigator.pop(ctx);
-                            try {
-                              await _api.addVehicle(
-                                make: make,
-                                model: model,
-                                connectorType: connectorType,
-                                regNumber: regNumber.isEmpty ? null : regNumber,
-                              );
-                              _load();
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Could not save vehicle: $e')),
-                              );
-                            }
-                          },
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
+      builder: (ctx) => const _AddVehicleSheetContent(),
     );
+    if (added == true) _load();
   }
 
   Future<void> _logout() async {
@@ -203,7 +119,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.directions_car_filled_rounded, color: AppColors.skyBlue),
                         title: Text(v.displayName, style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700)),
-                        subtitle: Text('${v.connectorType}${v.regNumber != null ? ' • ${v.regNumber}' : ''}'),
+                        subtitle: Text(
+                          '${v.connectorType} • ${v.batteryCapacityKwh.toStringAsFixed(1)} kWh${v.regNumber != null ? ' • ${v.regNumber}' : ''}',
+                        ),
                         trailing: v.isDefault
                             ? const Chip(label: Text('Default', style: TextStyle(fontSize: 11)))
                             : IconButton(
@@ -229,6 +147,220 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AddVehicleSheetContent extends StatefulWidget {
+  const _AddVehicleSheetContent();
+
+  @override
+  State<_AddVehicleSheetContent> createState() => _AddVehicleSheetContentState();
+}
+
+class _AddVehicleSheetContentState extends State<_AddVehicleSheetContent> {
+  final _api = ApiService();
+  bool _showManualForm = false;
+  bool _saving = false;
+
+  final _makeCtrl = TextEditingController();
+  final _modelCtrl = TextEditingController();
+  final _capacityCtrl = TextEditingController();
+  String _manualConnectorType = 'CCS2';
+
+  @override
+  void dispose() {
+    _makeCtrl.dispose();
+    _modelCtrl.dispose();
+    _capacityCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveCatalogEntry(VehicleCatalogEntry entry) async {
+    setState(() => _saving = true);
+    try {
+      await _api.addVehicle(
+        make: entry.make,
+        model: entry.model,
+        connectorType: entry.connectorType,
+        batteryCapacityKwh: entry.capacityKwh,
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save vehicle: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveManualEntry() async {
+    final make = _makeCtrl.text.trim();
+    final model = _modelCtrl.text.trim();
+    final capacity = double.tryParse(_capacityCtrl.text.trim());
+    if (make.isEmpty || model.isEmpty || capacity == null || capacity <= 0) return;
+
+    setState(() => _saving = true);
+    try {
+      await _api.addVehicle(
+        make: make,
+        model: model,
+        connectorType: _manualConnectorType,
+        batteryCapacityKwh: capacity,
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save vehicle: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppColors.chromeMist,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: _showManualForm ? _manualForm() : _catalogList(),
+      ),
+    );
+  }
+
+  Widget _catalogList() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Add a vehicle', style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
+        const SizedBox(height: 4),
+        Text(
+          'Pick your EV so we can size Auto Stop correctly.',
+          style: GoogleFonts.nunitoSans(color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5),
+        ),
+        const SizedBox(height: 14),
+        Flexible(
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: kVehicleCatalog.length + 1,
+            itemBuilder: (context, i) {
+              if (i == kVehicleCatalog.length) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: GlassPanel(
+                    padding: EdgeInsets.zero,
+                    radius: 16,
+                    child: ListTile(
+                      leading: const Icon(Icons.edit_note_rounded, color: AppColors.skyBlue),
+                      title: Text('Other / not listed', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700)),
+                      onTap: _saving ? null : () => setState(() => _showManualForm = true),
+                    ),
+                  ),
+                );
+              }
+              final entry = kVehicleCatalog[i];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassPanel(
+                  padding: EdgeInsets.zero,
+                  radius: 16,
+                  child: ListTile(
+                    leading: const Icon(Icons.directions_car_filled_rounded, color: AppColors.skyBlue),
+                    title: Text(entry.displayName, style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700)),
+                    subtitle: Text('${entry.connectorType} • ${entry.capacityKwh.toStringAsFixed(1)} kWh'),
+                    onTap: _saving ? null : () => _saveCatalogEntry(entry),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (_saving)
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Center(child: CircularProgressIndicator(color: AppColors.skyBlue)),
+          ),
+      ],
+    );
+  }
+
+  Widget _manualForm() {
+    return StatefulBuilder(
+      builder: (ctx, setSheetState) {
+        final canSave = _makeCtrl.text.trim().isNotEmpty &&
+            _modelCtrl.text.trim().isNotEmpty &&
+            (double.tryParse(_capacityCtrl.text.trim()) ?? 0) > 0;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: AppColors.deepAzure),
+                  onPressed: () => setState(() => _showManualForm = false),
+                ),
+                Text('Add your vehicle', style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _makeCtrl,
+              onChanged: (_) => setSheetState(() {}),
+              decoration: const InputDecoration(hintText: 'Make (e.g. Tata) *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _modelCtrl,
+              onChanged: (_) => setSheetState(() {}),
+              decoration: const InputDecoration(hintText: 'Model (e.g. Nexon EV) *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _capacityCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setSheetState(() {}),
+              decoration: const InputDecoration(hintText: 'Battery capacity in kWh (e.g. 40) *'),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: ['CCS2', 'Type2'].map((type) {
+                final sel = _manualConnectorType == type;
+                return ChoiceChip(
+                  label: Text(type),
+                  selected: sel,
+                  onSelected: (_) => setSheetState(() => _manualConnectorType = type),
+                  selectedColor: AppColors.skyBlue,
+                  labelStyle: GoogleFonts.nunitoSans(color: sel ? Colors.white : AppColors.deepAzure, fontWeight: FontWeight.w700),
+                  backgroundColor: Colors.white,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            Text('* Make, model, and capacity are required', style: GoogleFonts.nunitoSans(fontSize: 12, color: AppColors.textMuted)),
+            const SizedBox(height: 12),
+            EnergyOrbButton(
+              label: 'Save vehicle',
+              icon: Icons.directions_car_filled_rounded,
+              green: true,
+              width: double.infinity,
+              loading: _saving,
+              onPressed: !canSave || _saving ? null : _saveManualEntry,
+            ),
+          ],
+        );
+      },
     );
   }
 }
