@@ -42,6 +42,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         (route) => false,
       );
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    if (provider.autoStopBlockedMessage != null) {
+      final message = provider.autoStopBlockedMessage!;
+      provider.clearAutoStopBlockedMessage();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

@@ -3,7 +3,12 @@ const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { checkVehicleConnectorCompatible } = require('../utils/vehicleCompat');
 const { asyncHandler } = require('../middleware/asyncHandler');
-const { computeBatteryPct, randomStartBatteryPct, isValidAutoStopPct } = require('../utils/batterySimulation');
+const {
+  computeBatteryPct,
+  randomStartBatteryPct,
+  isValidAutoStopPct,
+  BATTERY_CAPACITY_KWH,
+} = require('../utils/batterySimulation');
 const { finalizeSession } = require('../utils/sessionFinalize');
 
 const router = express.Router();
@@ -99,19 +104,42 @@ router.get('/active', asyncHandler(async (req, res) => {
   // auto_stop_pct of null means "charge to 100%" — treat it the same as an
   // explicit target of 100 so every session eventually completes.
   const targetPct = row.auto_stop_pct ?? 100;
+  let autoStopBlocked = null;
   if (batteryPct >= targetPct) {
+    // Bill only the energy needed to reach the target, not full elapsed
+    // wall-clock energy — polls can arrive long after the target was
+    // crossed (e.g. app backgrounded for hours), and billing elapsed
+    // energy in that case would overcharge the user well past their
+    // requested stop point.
+    const energyToTarget = Math.max(0, (targetPct - Number(row.start_battery_pct)) / 100) * BATTERY_CAPACITY_KWH;
+    const billedKwh = Math.min(energyKwh, energyToTarget);
+    const billedCost = billedKwh * Number(row.price_per_kwh);
     const result = await finalizeSession(pool, {
       sessionId: row.id,
       userId: req.user.id,
       connectorId: row.connector_id,
-      energyKwh,
-      cost: Number(cost.toFixed(2)),
+      energyKwh: billedKwh,
+      cost: Number(billedCost.toFixed(2)),
     });
     if (result.ok) {
       return res.json({ session: formatSession(result.session), autoStopped: true });
     }
+    if (result.alreadyFinalized) {
+      // A concurrent poll/manual-stop already finalized this session
+      // between our read and the finalize attempt; it's no longer active.
+      return res.json({ session: null });
+    }
     // Insufficient balance to auto-charge: fall through and report the
-    // still-active session rather than force-stopping without payment.
+    // still-active session rather than force-stopping without payment,
+    // but flag why it's stuck so the client can surface it instead of
+    // silently treating this as a normal in-progress session (cost would
+    // otherwise keep growing every poll, making it progressively less
+    // affordable with no explanation).
+    autoStopBlocked = {
+      blockedReason: result.error,
+      requiredCost: result.cost,
+      walletBalance: result.balance,
+    };
   }
 
   res.json({
@@ -129,6 +157,14 @@ router.get('/active', asyncHandler(async (req, res) => {
       batteryPct: Number(batteryPct.toFixed(1)),
       startBatteryPct: row.start_battery_pct,
       autoStopPct: row.auto_stop_pct,
+      ...(autoStopBlocked
+        ? {
+            autoStopBlocked: true,
+            blockedReason: autoStopBlocked.blockedReason,
+            requiredCost: autoStopBlocked.requiredCost,
+            walletBalance: autoStopBlocked.walletBalance,
+          }
+        : {}),
     },
   });
 }));
@@ -192,7 +228,41 @@ router.patch('/:id/auto-stop', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'Active session not found' });
   }
 
-  res.json({ session: formatSession(rows[0]) });
+  // Re-join connector/station and recompute live fields the same way
+  // GET /active does, rather than returning the bare updated row: the
+  // stored energy_kwh/cost columns stay 0 for an active session (this app
+  // computes them live on read), and formatSession() with no connector arg
+  // leaves stationName/powerKw/pricePerKwh undefined — which would make
+  // the active-session UI visibly regress until the next poll corrects it.
+  const row = rows[0];
+  const joined = await pool.query(
+    `SELECT c.power_kw, c.price_per_kwh, s.name AS station_name
+     FROM connectors c JOIN stations s ON s.id = c.station_id
+     WHERE c.id = $1`,
+    [row.connector_id]
+  );
+  const connector = joined.rows[0];
+  const elapsedHours = (Date.now() - new Date(row.started_at).getTime()) / 3600000;
+  const energyKwh = Math.min(elapsedHours * Number(connector.power_kw), 100); // cap for demo
+  const cost = energyKwh * Number(connector.price_per_kwh);
+
+  res.json({
+    session: {
+      id: row.id,
+      stationId: row.station_id,
+      stationName: connector.station_name,
+      connectorId: row.connector_id,
+      status: row.status,
+      startedAt: row.started_at,
+      powerKw: Number(connector.power_kw),
+      pricePerKwh: Number(connector.price_per_kwh),
+      energyKwh: Number(energyKwh.toFixed(2)),
+      cost: Number(cost.toFixed(2)),
+      batteryPct: Number(computeBatteryPct(row.start_battery_pct, energyKwh).toFixed(1)),
+      startBatteryPct: row.start_battery_pct,
+      autoStopPct: row.auto_stop_pct,
+    },
+  });
 }));
 
 // GET /api/sessions/history

@@ -16,6 +16,15 @@ class SessionProvider extends ChangeNotifier {
   // consumes this once (via a listener) then calls clearAutoStopMessage().
   String? autoStopMessage;
 
+  // Set when the backend reports the session hit its Auto Stop target but
+  // couldn't be finalized because the wallet balance was insufficient
+  // (GET /active's autoStopBlocked flag). Tracked separately from
+  // autoStopMessage/error since the session stays active and polling
+  // continues — _autoStopBlockedActive dedupes so we only surface this
+  // once per blocked "episode" rather than every 5s poll.
+  String? autoStopBlockedMessage;
+  bool _autoStopBlockedActive = false;
+
   Future<void> refreshActiveSession() async {
     try {
       final data = await _api.getActiveSession();
@@ -25,9 +34,21 @@ class SessionProvider extends ChangeNotifier {
         final pct = session?.batteryPct.toStringAsFixed(0) ?? '100';
         autoStopMessage = '🔋 Auto-stopped at $pct% — charged to your target!';
         activeSession = null;
+        _autoStopBlockedActive = false;
         stopPolling();
       } else {
-        activeSession = data['session'] != null ? ChargingSession.fromJson(data['session']) : null;
+        final sessionJson = data['session'] as Map<String, dynamic>?;
+        activeSession = sessionJson != null ? ChargingSession.fromJson(sessionJson) : null;
+
+        final blocked = sessionJson?['autoStopBlocked'] == true;
+        if (blocked && !_autoStopBlockedActive) {
+          final reason = sessionJson?['blockedReason'] as String? ??
+              'Auto stop target reached, but there was a problem charging your wallet.';
+          autoStopBlockedMessage = reason;
+          _autoStopBlockedActive = true;
+        } else if (!blocked) {
+          _autoStopBlockedActive = false;
+        }
       }
       notifyListeners();
     } catch (e) {
@@ -37,6 +58,10 @@ class SessionProvider extends ChangeNotifier {
 
   void clearAutoStopMessage() {
     autoStopMessage = null;
+  }
+
+  void clearAutoStopBlockedMessage() {
+    autoStopBlockedMessage = null;
   }
 
   void startPolling() {
@@ -59,6 +84,8 @@ class SessionProvider extends ChangeNotifier {
     isLoading = true;
     error = null;
     autoStopMessage = null;
+    autoStopBlockedMessage = null;
+    _autoStopBlockedActive = false;
     notifyListeners();
     try {
       final data = await _api.startSession(
@@ -89,6 +116,8 @@ class SessionProvider extends ChangeNotifier {
       await _api.stopSession(activeSession!.id);
       activeSession = null;
       autoStopMessage = null;
+      autoStopBlockedMessage = null;
+      _autoStopBlockedActive = false;
       stopPolling();
       isLoading = false;
       notifyListeners();

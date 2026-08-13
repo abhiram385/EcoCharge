@@ -32,8 +32,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _bootstrap() async {
-    await context.read<SessionProvider>().refreshActiveSession();
+    final sessionProvider = context.read<SessionProvider>();
+    await sessionProvider.refreshActiveSession();
+    _showAutoStopMessageIfAny(sessionProvider);
     await _loadLocationAndStations();
+  }
+
+  // The home screen is very often the first thing a user sees after
+  // reopening the app — which is exactly when a session that reached its
+  // Auto Stop target while the app was backgrounded gets finalized (this
+  // refreshActiveSession() call hits the same GET /active that performs
+  // the auto-stop finalize). ActiveSessionScreen is the only other place
+  // that reads autoStopMessage, so if it isn't mounted, nothing tells the
+  // user their session just completed unless we handle it here too.
+  void _showAutoStopMessageIfAny(SessionProvider sessionProvider) {
+    final message = sessionProvider.autoStopMessage;
+    if (message == null) return;
+    sessionProvider.clearAutoStopMessage();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _loadLocationAndStations() async {
