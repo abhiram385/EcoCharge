@@ -160,6 +160,9 @@ router.post('/:id/stop', asyncHandler(async (req, res) => {
   });
 
   if (!result.ok) {
+    if (result.alreadyFinalized) {
+      return res.status(409).json({ error: result.error, alreadyFinalized: true });
+    }
     return res.status(402).json({ error: result.error, cost: result.cost, balance: result.balance });
   }
 
