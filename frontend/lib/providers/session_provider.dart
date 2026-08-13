@@ -58,6 +58,7 @@ class SessionProvider extends ChangeNotifier {
   }) async {
     isLoading = true;
     error = null;
+    autoStopMessage = null;
     notifyListeners();
     try {
       final data = await _api.startSession(
@@ -87,6 +88,7 @@ class SessionProvider extends ChangeNotifier {
     try {
       await _api.stopSession(activeSession!.id);
       activeSession = null;
+      autoStopMessage = null;
       stopPolling();
       isLoading = false;
       notifyListeners();
