@@ -105,6 +105,9 @@ class ChargingSession {
   final double cost;
   final double? powerKw;
   final double? pricePerKwh;
+  final double batteryPct;
+  final int startBatteryPct;
+  final int? autoStopPct;
 
   ChargingSession({
     required this.id,
@@ -118,6 +121,9 @@ class ChargingSession {
     required this.cost,
     this.powerKw,
     this.pricePerKwh,
+    required this.batteryPct,
+    required this.startBatteryPct,
+    this.autoStopPct,
   });
 
   factory ChargingSession.fromJson(Map<String, dynamic> json) {
@@ -133,6 +139,9 @@ class ChargingSession {
       cost: (json['cost'] as num).toDouble(),
       powerKw: json['powerKw'] != null ? (json['powerKw'] as num).toDouble() : null,
       pricePerKwh: json['pricePerKwh'] != null ? (json['pricePerKwh'] as num).toDouble() : null,
+      batteryPct: (json['batteryPct'] as num).toDouble(),
+      startBatteryPct: json['startBatteryPct'] as int,
+      autoStopPct: json['autoStopPct'] as int?,
     );
   }
 }

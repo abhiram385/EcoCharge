@@ -153,6 +153,7 @@ class ApiService {
     required String connectorId,
     String? vehicleId,
     String? bookingId,
+    int? autoStopPct,
   }) async {
     final res = await http.post(
       _uri('/api/sessions/start'),
@@ -162,6 +163,7 @@ class ApiService {
         'connectorId': connectorId,
         'vehicleId': vehicleId,
         'bookingId': bookingId,
+        'autoStopPct': autoStopPct,
       }),
     );
     return await _handle(res);
@@ -174,6 +176,15 @@ class ApiService {
 
   Future<Map<String, dynamic>> stopSession(String sessionId) async {
     final res = await http.post(_uri('/api/sessions/$sessionId/stop'), headers: await _headers());
+    return await _handle(res);
+  }
+
+  Future<Map<String, dynamic>> setAutoStop(String sessionId, int? autoStopPct) async {
+    final res = await http.patch(
+      _uri('/api/sessions/$sessionId/auto-stop'),
+      headers: await _headers(),
+      body: jsonEncode({'autoStopPct': autoStopPct}),
+    );
     return await _handle(res);
   }
 
