@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { checkVehicleConnectorCompatible } = require('../utils/vehicleCompat');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { computeBatteryPct, randomStartBatteryPct, isValidAutoStopPct } = require('../utils/batterySimulation');
+const { finalizeSession } = require('../utils/sessionFinalize');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -93,6 +94,25 @@ router.get('/active', asyncHandler(async (req, res) => {
   const elapsedHours = (Date.now() - new Date(row.started_at).getTime()) / 3600000;
   const energyKwh = Math.min(elapsedHours * Number(row.power_kw), 100); // cap for demo
   const cost = energyKwh * Number(row.price_per_kwh);
+  const batteryPct = computeBatteryPct(row.start_battery_pct, energyKwh);
+
+  // auto_stop_pct of null means "charge to 100%" — treat it the same as an
+  // explicit target of 100 so every session eventually completes.
+  const targetPct = row.auto_stop_pct ?? 100;
+  if (batteryPct >= targetPct) {
+    const result = await finalizeSession(pool, {
+      sessionId: row.id,
+      userId: req.user.id,
+      connectorId: row.connector_id,
+      energyKwh,
+      cost: Number(cost.toFixed(2)),
+    });
+    if (result.ok) {
+      return res.json({ session: formatSession(result.session), autoStopped: true });
+    }
+    // Insufficient balance to auto-charge: fall through and report the
+    // still-active session rather than force-stopping without payment.
+  }
 
   res.json({
     session: {
@@ -106,6 +126,9 @@ router.get('/active', asyncHandler(async (req, res) => {
       pricePerKwh: Number(row.price_per_kwh),
       energyKwh: Number(energyKwh.toFixed(2)),
       cost: Number(cost.toFixed(2)),
+      batteryPct: Number(batteryPct.toFixed(1)),
+      startBatteryPct: row.start_battery_pct,
+      autoStopPct: row.auto_stop_pct,
     },
   });
 }));
