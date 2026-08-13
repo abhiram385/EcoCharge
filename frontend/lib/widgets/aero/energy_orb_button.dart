@@ -136,13 +136,17 @@ class _EnergyOrbButtonState extends State<EnergyOrbButton> with TickerProviderSt
                                   Icon(widget.icon, color: Colors.white, size: 20),
                                   const SizedBox(width: 8),
                                 ],
-                                Text(
-                                  widget.label,
-                                  style: GoogleFonts.baloo2(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    shadows: const [Shadow(color: Color(0x33000000), blurRadius: 2, offset: Offset(0, 1))],
+                                Flexible(
+                                  child: Text(
+                                    widget.label,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: GoogleFonts.baloo2(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      shadows: const [Shadow(color: Color(0x33000000), blurRadius: 2, offset: Offset(0, 1))],
+                                    ),
                                   ),
                                 ),
                               ],
