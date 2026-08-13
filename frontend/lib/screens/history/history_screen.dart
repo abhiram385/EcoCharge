@@ -8,7 +8,8 @@ import '../../widgets/aero/aero_background.dart';
 import '../../widgets/aero/glass_panel.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final bool isActive;
+  const HistoryScreen({super.key, this.isActive = true});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -28,6 +29,14 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant HistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
