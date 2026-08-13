@@ -1,0 +1,5 @@
+<!-- Add these keys into ios/Runner/Info.plist after running `flutter create .` -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>EcoCharge uses your location to show nearby charging stations.</string>
+<key>io.flutter.embedded_views_preview</key>
+<true/>
