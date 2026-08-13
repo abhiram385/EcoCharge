@@ -50,6 +50,23 @@ router.post('/start', asyncHandler(async (req, res) => {
     return res.status(compat.error === 'Vehicle not found' ? 404 : 409).json({ error: compat.error });
   }
 
+  // Snapshot the vehicle's actual battery capacity onto the session at
+  // start time, mirroring how start_battery_pct is randomly assigned once
+  // and stored rather than re-derived on every read — a session's battery
+  // math stays fixed for its whole lifetime even if the vehicle record is
+  // later edited or deleted. Sessions with no vehicle attached keep the
+  // flat BATTERY_CAPACITY_KWH default.
+  let sessionCapacityKwh = BATTERY_CAPACITY_KWH;
+  if (vehicleId) {
+    // The compat check above already confirmed this vehicle exists and
+    // belongs to this user, so a row is guaranteed here.
+    const vehicleRow = await pool.query('SELECT battery_capacity_kwh FROM vehicles WHERE id = $1 AND user_id = $2', [
+      vehicleId,
+      req.user.id,
+    ]);
+    sessionCapacityKwh = Number(vehicleRow.rows[0].battery_capacity_kwh);
+  }
+
   const existingActive = await pool.query(
     "SELECT id FROM charging_sessions WHERE user_id = $1 AND status = 'active'",
     [req.user.id]
@@ -63,9 +80,18 @@ router.post('/start', asyncHandler(async (req, res) => {
     await client.query('BEGIN');
     const session = await client.query(
       `INSERT INTO charging_sessions
-         (user_id, booking_id, station_id, connector_id, vehicle_id, status, start_battery_pct, auto_stop_pct)
-       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7) RETURNING *`,
-      [req.user.id, bookingId || null, stationId, connectorId, vehicleId || null, randomStartBatteryPct(), normalizedAutoStopPct]
+         (user_id, booking_id, station_id, connector_id, vehicle_id, status, start_battery_pct, auto_stop_pct, battery_capacity_kwh)
+       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8) RETURNING *`,
+      [
+        req.user.id,
+        bookingId || null,
+        stationId,
+        connectorId,
+        vehicleId || null,
+        randomStartBatteryPct(),
+        normalizedAutoStopPct,
+        sessionCapacityKwh,
+      ]
     );
     await client.query("UPDATE connectors SET status = 'occupied' WHERE id = $1", [connectorId]);
     await client.query('COMMIT');
@@ -99,7 +125,7 @@ router.get('/active', asyncHandler(async (req, res) => {
   const elapsedHours = (Date.now() - new Date(row.started_at).getTime()) / 3600000;
   const energyKwh = Math.min(elapsedHours * Number(row.power_kw), 100); // cap for demo
   const cost = energyKwh * Number(row.price_per_kwh);
-  const batteryPct = computeBatteryPct(row.start_battery_pct, energyKwh);
+  const batteryPct = computeBatteryPct(row.start_battery_pct, energyKwh, row.battery_capacity_kwh);
 
   // auto_stop_pct of null means "charge to 100%" — treat it the same as an
   // explicit target of 100 so every session eventually completes.
@@ -111,7 +137,7 @@ router.get('/active', asyncHandler(async (req, res) => {
     // crossed (e.g. app backgrounded for hours), and billing elapsed
     // energy in that case would overcharge the user well past their
     // requested stop point.
-    const energyToTarget = Math.max(0, (targetPct - Number(row.start_battery_pct)) / 100) * BATTERY_CAPACITY_KWH;
+    const energyToTarget = Math.max(0, (targetPct - Number(row.start_battery_pct)) / 100) * Number(row.battery_capacity_kwh);
     const billedKwh = Math.min(energyKwh, energyToTarget);
     const billedCost = billedKwh * Number(row.price_per_kwh);
     const result = await finalizeSession(pool, {
@@ -157,6 +183,7 @@ router.get('/active', asyncHandler(async (req, res) => {
       batteryPct: Number(batteryPct.toFixed(1)),
       startBatteryPct: row.start_battery_pct,
       autoStopPct: row.auto_stop_pct,
+      batteryCapacityKwh: Number(row.battery_capacity_kwh),
       ...(autoStopBlocked
         ? {
             autoStopBlocked: true,
@@ -258,9 +285,10 @@ router.patch('/:id/auto-stop', asyncHandler(async (req, res) => {
       pricePerKwh: Number(connector.price_per_kwh),
       energyKwh: Number(energyKwh.toFixed(2)),
       cost: Number(cost.toFixed(2)),
-      batteryPct: Number(computeBatteryPct(row.start_battery_pct, energyKwh).toFixed(1)),
+      batteryPct: Number(computeBatteryPct(row.start_battery_pct, energyKwh, row.battery_capacity_kwh).toFixed(1)),
       startBatteryPct: row.start_battery_pct,
       autoStopPct: row.auto_stop_pct,
+      batteryCapacityKwh: Number(row.battery_capacity_kwh),
     },
   });
 }));
@@ -290,9 +318,10 @@ function formatSession(row, connector) {
     cost: Number(row.cost),
     powerKw: connector ? Number(connector.power_kw) : undefined,
     pricePerKwh: connector ? Number(connector.price_per_kwh) : undefined,
-    batteryPct: Number(computeBatteryPct(row.start_battery_pct, row.energy_kwh).toFixed(1)),
+    batteryPct: Number(computeBatteryPct(row.start_battery_pct, row.energy_kwh, row.battery_capacity_kwh).toFixed(1)),
     startBatteryPct: row.start_battery_pct,
     autoStopPct: row.auto_stop_pct,
+    batteryCapacityKwh: Number(row.battery_capacity_kwh),
   };
 }
 
