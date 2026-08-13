@@ -3,16 +3,25 @@ const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { checkVehicleConnectorCompatible } = require('../utils/vehicleCompat');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { computeBatteryPct, randomStartBatteryPct, isValidAutoStopPct } = require('../utils/batterySimulation');
 
 const router = express.Router();
 router.use(requireAuth);
 
 // POST /api/sessions/start { stationId, connectorId, vehicleId, bookingId? }
 router.post('/start', asyncHandler(async (req, res) => {
-  const { stationId, connectorId, vehicleId, bookingId } = req.body;
+  const { stationId, connectorId, vehicleId, bookingId, autoStopPct } = req.body;
 
   if (!stationId || !connectorId) {
     return res.status(400).json({ error: 'stationId and connectorId are required' });
+  }
+
+  let normalizedAutoStopPct = null;
+  if (autoStopPct !== undefined && autoStopPct !== null) {
+    normalizedAutoStopPct = Number(autoStopPct);
+    if (!isValidAutoStopPct(normalizedAutoStopPct)) {
+      return res.status(400).json({ error: 'autoStopPct must be one of 10, 20, ..., 100' });
+    }
   }
 
   const connector = await pool.query('SELECT * FROM connectors WHERE id = $1 AND station_id = $2', [
@@ -47,9 +56,10 @@ router.post('/start', asyncHandler(async (req, res) => {
   try {
     await client.query('BEGIN');
     const session = await client.query(
-      `INSERT INTO charging_sessions (user_id, booking_id, station_id, connector_id, vehicle_id, status)
-       VALUES ($1, $2, $3, $4, $5, 'active') RETURNING *`,
-      [req.user.id, bookingId || null, stationId, connectorId, vehicleId || null]
+      `INSERT INTO charging_sessions
+         (user_id, booking_id, station_id, connector_id, vehicle_id, status, start_battery_pct, auto_stop_pct)
+       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7) RETURNING *`,
+      [req.user.id, bookingId || null, stationId, connectorId, vehicleId || null, randomStartBatteryPct(), normalizedAutoStopPct]
     );
     await client.query("UPDATE connectors SET status = 'occupied' WHERE id = $1", [connectorId]);
     await client.query('COMMIT');
@@ -186,6 +196,9 @@ function formatSession(row, connector) {
     cost: Number(row.cost),
     powerKw: connector ? Number(connector.power_kw) : undefined,
     pricePerKwh: connector ? Number(connector.price_per_kwh) : undefined,
+    batteryPct: Number(computeBatteryPct(row.start_battery_pct, row.energy_kwh).toFixed(1)),
+    startBatteryPct: row.start_battery_pct,
+    autoStopPct: row.auto_stop_pct,
   };
 }
 
