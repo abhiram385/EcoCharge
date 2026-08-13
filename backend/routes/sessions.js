@@ -151,47 +151,19 @@ router.post('/:id/stop', asyncHandler(async (req, res) => {
   const energyKwh = Math.min(elapsedHours * Number(row.power_kw), 100);
   const cost = Number((energyKwh * Number(row.price_per_kwh)).toFixed(2));
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  const result = await finalizeSession(pool, {
+    sessionId: row.id,
+    userId: req.user.id,
+    connectorId: row.connector_id,
+    energyKwh,
+    cost,
+  });
 
-    const balanceResult = await client.query('SELECT wallet_balance FROM users WHERE id = $1 FOR UPDATE', [
-      req.user.id,
-    ]);
-    const balance = Number(balanceResult.rows[0].wallet_balance);
-    if (balance < cost) {
-      await client.query('ROLLBACK');
-      return res.status(402).json({ error: 'Insufficient wallet balance. Please top up.', cost, balance });
-    }
-
-    const updatedSession = await client.query(
-      `UPDATE charging_sessions
-       SET status = 'completed', stopped_at = now(), energy_kwh = $1, cost = $2
-       WHERE id = $3 RETURNING *`,
-      [energyKwh.toFixed(3), cost, row.id]
-    );
-
-    await client.query('UPDATE users SET wallet_balance = wallet_balance - $1, updated_at = now() WHERE id = $2', [
-      cost,
-      req.user.id,
-    ]);
-
-    await client.query(
-      `INSERT INTO wallet_transactions (user_id, type, amount, reference, session_id)
-       VALUES ($1, 'charge_debit', $2, 'charging_session', $3)`,
-      [req.user.id, cost, row.id]
-    );
-
-    await client.query("UPDATE connectors SET status = 'available' WHERE id = $1", [row.connector_id]);
-
-    await client.query('COMMIT');
-    res.json({ session: formatSession(updatedSession.rows[0]) });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+  if (!result.ok) {
+    return res.status(402).json({ error: result.error, cost: result.cost, balance: result.balance });
   }
+
+  res.json({ session: formatSession(result.session) });
 }));
 
 // GET /api/sessions/history
