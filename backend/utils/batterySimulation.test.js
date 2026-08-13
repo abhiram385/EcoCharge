@@ -29,6 +29,19 @@ describe('computeBatteryPct', () => {
   it('handles zero energy delivered', () => {
     expect(computeBatteryPct(35, 0)).toBe(35);
   });
+
+  it('uses a custom capacity when provided', () => {
+    // 2 kWh into a 4kWh battery = +50 percentage points
+    expect(computeBatteryPct(20, 2, 4)).toBe(70);
+  });
+
+  it('defaults to the global BATTERY_CAPACITY_KWH when no capacity is given', () => {
+    expect(computeBatteryPct(20, 20)).toBe(computeBatteryPct(20, 20, 40));
+  });
+
+  it('caps at 100 with a custom capacity too', () => {
+    expect(computeBatteryPct(50, 10, 4)).toBe(100);
+  });
 });
 
 describe('isValidAutoStopPct', () => {

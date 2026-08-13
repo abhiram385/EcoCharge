@@ -7,8 +7,8 @@ function randomStartBatteryPct() {
   return crypto.randomInt(15, 56); // 15–55 inclusive (upper bound is exclusive)
 }
 
-function computeBatteryPct(startBatteryPct, energyKwh) {
-  const pct = Number(startBatteryPct) + (Number(energyKwh) / BATTERY_CAPACITY_KWH) * 100;
+function computeBatteryPct(startBatteryPct, energyKwh, capacityKwh = BATTERY_CAPACITY_KWH) {
+  const pct = Number(startBatteryPct) + (Number(energyKwh) / Number(capacityKwh)) * 100;
   return Math.min(100, pct);
 }
 
