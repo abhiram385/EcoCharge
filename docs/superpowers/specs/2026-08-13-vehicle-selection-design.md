@@ -177,3 +177,49 @@ session's vehicle-specific capacity server-side.
   add a vehicle via the curated list, add one via "Other," confirm the
   Charge Now sheet filters by connector type, pre-selects sensibly, and
   correctly blocks/excludes incompatible vehicles.
+
+## Bundled fixes (found during device testing, unrelated to vehicles)
+
+Three small pre-existing bugs surfaced during manual device testing of the
+battery-autostop feature. Bundled into this same implementation pass since
+two of them touch `station_detail_screen.dart`, which vehicle selection
+also modifies.
+
+### Fix 1: Overflow on the connector card's "Charge now" button
+
+`frontend/lib/widgets/aero/energy_orb_button.dart` — the button's internal
+`Row` (icon + label) doesn't shrink when squeezed into a tight width (the
+half-width "Charge now" slot in `_ConnectorTile`, alongside "Book a
+slot"). Fix: wrap the label `Text` in `Flexible` with
+`overflow: TextOverflow.ellipsis, maxLines: 1`, so the Row compresses the
+text (ellipsizing as a last resort) instead of overflowing. This is a
+shared-component change, but every other call site already passes
+`width: double.infinity` or sits in an `Expanded`, so nothing else changes
+visually — only the tight-width case is affected.
+
+### Fix 2: History tab doesn't refresh when switching back to it
+
+`frontend/lib/screens/home/home_shell.dart` +
+`frontend/lib/screens/history/history_screen.dart` — `HomeShell` uses
+`IndexedStack`, which keeps all 4 tab screens alive forever after first
+build. `HistoryScreen` only fetches data once in `initState()`, so
+viewing History before a session completes caches "empty" and never
+re-fetches on later visits (short of a manual pull-to-refresh).
+
+Fix: pass an `isActive` flag into `HistoryScreen` reflecting whether it's
+the currently selected tab (recomputed on every `HomeShell` rebuild). In
+`HistoryScreen`, detect the not-active → active transition in
+`didUpdateWidget` and trigger a reload at that point. Keeps
+`IndexedStack`'s no-flicker behavior while making History fetch fresh data
+every time it's switched to.
+
+### Fix 3: Wallet top-up fakes success on failure
+
+`frontend/lib/providers/wallet_provider.dart` — `WalletProvider.topUp()`
+currently has an "optimistic fallback": if the top-up API call fails, it
+still tells the user "Added ₹X to wallet" and fakes a local balance
+increase, rather than showing a failure. Fix: remove that fallback — on a
+genuine API failure, set `error` and return `false`, so the existing
+`WalletScreen` snackbar (`ok ? 'Added ₹$selected...' : 'Top-up failed'`)
+correctly reports failure instead of misleading the user about their
+balance.
