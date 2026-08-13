@@ -169,6 +169,32 @@ router.post('/:id/stop', asyncHandler(async (req, res) => {
   res.json({ session: formatSession(result.session) });
 }));
 
+// PATCH /api/sessions/:id/auto-stop { autoStopPct }
+router.patch('/:id/auto-stop', asyncHandler(async (req, res) => {
+  const { autoStopPct } = req.body;
+
+  let normalizedAutoStopPct = null;
+  if (autoStopPct !== undefined && autoStopPct !== null) {
+    normalizedAutoStopPct = Number(autoStopPct);
+    if (!isValidAutoStopPct(normalizedAutoStopPct)) {
+      return res.status(400).json({ error: 'autoStopPct must be one of 10, 20, ..., 100' });
+    }
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE charging_sessions SET auto_stop_pct = $1
+     WHERE id = $2 AND user_id = $3 AND status = 'active'
+     RETURNING *`,
+    [normalizedAutoStopPct, req.params.id, req.user.id]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: 'Active session not found' });
+  }
+
+  res.json({ session: formatSession(rows[0]) });
+}));
+
 // GET /api/sessions/history
 router.get('/history', asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
