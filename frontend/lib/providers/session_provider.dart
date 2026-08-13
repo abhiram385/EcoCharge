@@ -11,14 +11,32 @@ class SessionProvider extends ChangeNotifier {
   String? error;
   Timer? _pollTimer;
 
+  // Set for exactly one refresh cycle when a poll discovers the session was
+  // auto-stopped (battery reached its target). The active-session screen
+  // consumes this once (via a listener) then calls clearAutoStopMessage().
+  String? autoStopMessage;
+
   Future<void> refreshActiveSession() async {
     try {
       final data = await _api.getActiveSession();
-      activeSession = data['session'] != null ? ChargingSession.fromJson(data['session']) : null;
+      final autoStopped = data['autoStopped'] == true;
+      if (autoStopped) {
+        final session = data['session'] != null ? ChargingSession.fromJson(data['session']) : null;
+        final pct = session?.batteryPct.toStringAsFixed(0) ?? '100';
+        autoStopMessage = '🔋 Auto-stopped at $pct% — charged to your target!';
+        activeSession = null;
+        stopPolling();
+      } else {
+        activeSession = data['session'] != null ? ChargingSession.fromJson(data['session']) : null;
+      }
       notifyListeners();
     } catch (e) {
       error = e.toString();
     }
+  }
+
+  void clearAutoStopMessage() {
+    autoStopMessage = null;
   }
 
   void startPolling() {
@@ -36,6 +54,7 @@ class SessionProvider extends ChangeNotifier {
     required String connectorId,
     String? vehicleId,
     String? bookingId,
+    int? autoStopPct,
   }) async {
     isLoading = true;
     error = null;
@@ -46,6 +65,7 @@ class SessionProvider extends ChangeNotifier {
         connectorId: connectorId,
         vehicleId: vehicleId,
         bookingId: bookingId,
+        autoStopPct: autoStopPct,
       );
       activeSession = ChargingSession.fromJson(data['session']);
       startPolling();
@@ -74,6 +94,20 @@ class SessionProvider extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateAutoStop(int? autoStopPct) async {
+    if (activeSession == null) return false;
+    try {
+      final data = await _api.setAutoStop(activeSession!.id, autoStopPct);
+      activeSession = ChargingSession.fromJson(data['session']);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
       notifyListeners();
       return false;
     }
