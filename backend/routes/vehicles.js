@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { BATTERY_CAPACITY_KWH } = require('../utils/batterySimulation');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -15,12 +16,20 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ vehicles: rows.map(formatVehicle) });
 }));
 
-// POST /api/vehicles { make, model, connectorType, regNumber, isDefault }
+// POST /api/vehicles { make, model, connectorType, regNumber, isDefault, batteryCapacityKwh }
 router.post('/', asyncHandler(async (req, res) => {
-  const { make, model, connectorType, regNumber, isDefault } = req.body;
+  const { make, model, connectorType, regNumber, isDefault, batteryCapacityKwh } = req.body;
 
   if (!make || !model || !connectorType) {
     return res.status(400).json({ error: 'make, model, and connectorType are required' });
+  }
+
+  let normalizedCapacity = BATTERY_CAPACITY_KWH;
+  if (batteryCapacityKwh !== undefined && batteryCapacityKwh !== null) {
+    normalizedCapacity = Number(batteryCapacityKwh);
+    if (!Number.isFinite(normalizedCapacity) || normalizedCapacity <= 0) {
+      return res.status(400).json({ error: 'batteryCapacityKwh must be a positive number' });
+    }
   }
 
   if (isDefault) {
@@ -28,9 +37,9 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO vehicles (user_id, make, model, connector_type, reg_number, is_default)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [req.user.id, make, model, connectorType, regNumber || null, !!isDefault]
+    `INSERT INTO vehicles (user_id, make, model, connector_type, reg_number, is_default, battery_capacity_kwh)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [req.user.id, make, model, connectorType, regNumber || null, !!isDefault, normalizedCapacity]
   );
 
   res.status(201).json({ vehicle: formatVehicle(rows[0]) });
@@ -56,6 +65,7 @@ function formatVehicle(row) {
     connectorType: row.connector_type,
     regNumber: row.reg_number,
     isDefault: row.is_default,
+    batteryCapacityKwh: Number(row.battery_capacity_kwh),
   };
 }
 
