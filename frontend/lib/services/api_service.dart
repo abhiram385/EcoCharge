@@ -90,6 +90,7 @@ class ApiService {
     required String make,
     required String model,
     required String connectorType,
+    required double batteryCapacityKwh,
     String? regNumber,
     bool isDefault = false,
   }) async {
@@ -100,6 +101,7 @@ class ApiService {
         'make': make,
         'model': model,
         'connectorType': connectorType,
+        'batteryCapacityKwh': batteryCapacityKwh,
         'regNumber': regNumber,
         'isDefault': isDefault,
       }),

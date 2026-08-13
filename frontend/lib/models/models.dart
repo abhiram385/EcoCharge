@@ -31,6 +31,7 @@ class Vehicle {
   final String connectorType;
   final String? regNumber;
   final bool isDefault;
+  final double batteryCapacityKwh;
 
   Vehicle({
     required this.id,
@@ -39,6 +40,7 @@ class Vehicle {
     required this.connectorType,
     this.regNumber,
     required this.isDefault,
+    required this.batteryCapacityKwh,
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class Vehicle {
       connectorType: json['connectorType'],
       regNumber: json['regNumber'],
       isDefault: json['isDefault'] ?? false,
+      batteryCapacityKwh: (json['batteryCapacityKwh'] as num).toDouble(),
     );
   }
 
