@@ -15,9 +15,16 @@ async function finalizeSession(pool, { sessionId, userId, connectorId, energyKwh
     const updatedSession = await client.query(
       `UPDATE charging_sessions
        SET status = 'completed', stopped_at = now(), energy_kwh = $1, cost = $2
-       WHERE id = $3 RETURNING *`,
+       WHERE id = $3 AND status = 'active' RETURNING *`,
       [energyKwh.toFixed(3), cost, sessionId]
     );
+
+    if (updatedSession.rows.length === 0) {
+      // Someone else (a concurrent poll/stop) already finalized this session
+      // between our read and this write. Do not debit the wallet again.
+      await client.query('ROLLBACK');
+      return { ok: false, error: 'Session already finalized', alreadyFinalized: true };
+    }
 
     await client.query('UPDATE users SET wallet_balance = wallet_balance - $1, updated_at = now() WHERE id = $2', [
       cost,
