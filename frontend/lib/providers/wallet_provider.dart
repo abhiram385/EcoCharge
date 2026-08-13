@@ -33,23 +33,9 @@ class WalletProvider extends ChangeNotifier {
       await load();
       return true;
     } catch (e) {
-      // The top-up request failed (e.g. backend unreachable). Rather than
-      // surface a hard failure to the user mid-flow, apply the top-up
-      // optimistically on the client so the experience stays smooth; it
-      // will reconcile with the server balance next time load() succeeds.
-      balance += amount;
-      transactions = [
-        WalletTransaction(
-          id: 'local-${DateTime.now().microsecondsSinceEpoch}',
-          type: 'topup',
-          amount: amount,
-          reference: 'app_topup',
-          createdAt: DateTime.now(),
-        ),
-        ...transactions,
-      ];
+      error = e.toString();
       notifyListeners();
-      return true;
+      return false;
     }
   }
 }
