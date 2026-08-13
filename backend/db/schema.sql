@@ -84,8 +84,16 @@ CREATE TABLE IF NOT EXISTS charging_sessions (
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     stopped_at TIMESTAMPTZ,
     energy_kwh NUMERIC(8,3) NOT NULL DEFAULT 0,
-    cost NUMERIC(10,2) NOT NULL DEFAULT 0
+    cost NUMERIC(10,2) NOT NULL DEFAULT 0,
+    start_battery_pct SMALLINT NOT NULL DEFAULT 20,
+    auto_stop_pct SMALLINT
 );
+
+-- Idempotent for databases that already had charging_sessions before this
+-- column existed (ADD COLUMN IF NOT EXISTS is a safe no-op on fresh installs
+-- where CREATE TABLE just created them).
+ALTER TABLE charging_sessions ADD COLUMN IF NOT EXISTS start_battery_pct SMALLINT NOT NULL DEFAULT 20;
+ALTER TABLE charging_sessions ADD COLUMN IF NOT EXISTS auto_stop_pct SMALLINT;
 
 -- Wallet transactions (top-ups, charges, refunds)
 CREATE TABLE IF NOT EXISTS wallet_transactions (
