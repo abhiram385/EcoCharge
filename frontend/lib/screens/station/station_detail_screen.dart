@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../models/models.dart';
 import '../../models/station.dart';
 import '../../providers/station_provider.dart';
 import '../../providers/session_provider.dart';
+import '../../services/api_service.dart';
 import '../../widgets/aero/aero_background.dart';
 import '../../widgets/aero/glass_panel.dart';
 import '../../widgets/aero/energy_orb_button.dart';
 import '../booking/booking_screen.dart';
+import '../profile/profile_screen.dart';
 import '../session/active_session_screen.dart';
 
 class StationDetailScreen extends StatefulWidget {
@@ -94,14 +97,41 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 
   Future<void> _startChargingNow(BuildContext context, Station station, Connector connector) async {
-    final autoStopPct = await _showAutoStopSheet(context);
-    if (autoStopPct == null || !context.mounted) return; // user cancelled the sheet
+    final api = ApiService();
+    final rawVehicles = await api.getVehicles();
+    final vehicles = rawVehicles.map((v) => Vehicle.fromJson(v)).toList();
+    final compatible = vehicles.where((v) => v.connectorType == connector.connectorType).toList();
+
+    if (!context.mounted) return;
+
+    if (compatible.isEmpty) {
+      final wantsToAdd = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Add a compatible vehicle'),
+          content: Text('You need a saved ${connector.connectorType} vehicle before charging here.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Add vehicle')),
+          ],
+        ),
+      );
+      if (wantsToAdd != true || !context.mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+      if (!context.mounted) return;
+      return _startChargingNow(context, station, connector);
+    }
+
+    final result = await _showChargeSheet(context, compatible);
+    if (result == null || !context.mounted) return; // user cancelled the sheet
 
     final sessionProvider = context.read<SessionProvider>();
     final ok = await sessionProvider.startCharging(
       stationId: station.id,
       connectorId: connector.id,
-      autoStopPct: autoStopPct == 100 ? null : autoStopPct,
+      vehicleId: result.vehicleId,
+      autoStopPct: result.autoStopPct == 100 ? null : result.autoStopPct,
     );
     if (!context.mounted) return;
     if (ok) {
@@ -115,12 +145,21 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
-  /// Shows a bottom sheet to pick the Auto Stop battery target (10 steps of
-  /// 10%, default 100 = charge to full). Returns the chosen percentage, or
-  /// null if the user dismissed the sheet without confirming.
-  Future<int?> _showAutoStopSheet(BuildContext context) async {
-    int selected = 100;
-    return showModalBottomSheet<int>(
+  /// Shows a combined bottom sheet: pick which saved vehicle is charging
+  /// (pre-selected if only one is compatible), then the Auto Stop battery
+  /// target (10 steps of 10%, range 10–100%, default 100 = charge to
+  /// full). Returns the chosen vehicle ID + percentage, or null if the
+  /// user dismissed the sheet without confirming.
+  Future<({String vehicleId, int autoStopPct})?> _showChargeSheet(
+    BuildContext context,
+    List<Vehicle> compatibleVehicles,
+  ) async {
+    Vehicle selectedVehicle = compatibleVehicles.firstWhere(
+      (v) => v.isDefault,
+      orElse: () => compatibleVehicles.first,
+    );
+    int selectedPct = 100;
+    return showModalBottomSheet<({String vehicleId, int autoStopPct})>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
@@ -134,6 +173,36 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('Vehicle', style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
+              const SizedBox(height: 10),
+              if (compatibleVehicles.length == 1)
+                GlassPanel(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  radius: 16,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.directions_car_filled_rounded, color: AppColors.skyBlue),
+                    title: Text(selectedVehicle.displayName, style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700)),
+                    subtitle: Text('${selectedVehicle.batteryCapacityKwh.toStringAsFixed(1)} kWh'),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: compatibleVehicles.map((v) {
+                    final sel = v.id == selectedVehicle.id;
+                    return ChoiceChip(
+                      label: Text(v.displayName),
+                      selected: sel,
+                      onSelected: (_) => setSheetState(() => selectedVehicle = v),
+                      selectedColor: AppColors.skyBlue,
+                      labelStyle: GoogleFonts.nunitoSans(color: sel ? Colors.white : AppColors.deepAzure, fontWeight: FontWeight.w700),
+                      backgroundColor: Colors.white,
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 20),
               Text('Auto Stop charging at',
                   style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
               const SizedBox(height: 4),
@@ -145,16 +214,16 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 radius: 20,
                 child: Column(
                   children: [
-                    Text('$selected%',
+                    Text('$selectedPct%',
                         style: GoogleFonts.baloo2(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.skyBlue)),
                     Slider(
-                      value: selected.toDouble(),
+                      value: selectedPct.toDouble(),
                       min: 10,
                       max: 100,
                       divisions: 9, // 10 steps of 10%: 10,20,...,100
                       activeColor: AppColors.skyBlue,
-                      label: '$selected%',
-                      onChanged: (v) => setSheetState(() => selected = v.round()),
+                      label: '$selectedPct%',
+                      onChanged: (v) => setSheetState(() => selectedPct = v.round()),
                     ),
                   ],
                 ),
@@ -164,7 +233,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 label: 'Start charging',
                 icon: Icons.bolt_rounded,
                 width: double.infinity,
-                onPressed: () => Navigator.pop(ctx, selected),
+                onPressed: () => Navigator.pop(ctx, (vehicleId: selectedVehicle.id, autoStopPct: selectedPct)),
               ),
             ],
           ),
