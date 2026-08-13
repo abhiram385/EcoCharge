@@ -32,8 +32,11 @@ CREATE TABLE IF NOT EXISTS vehicles (
     connector_type VARCHAR(30) NOT NULL, -- CCS2, CHAdeMO, Type2, GBT
     reg_number VARCHAR(20),
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    battery_capacity_kwh NUMERIC(6,2) NOT NULL DEFAULT 40,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS battery_capacity_kwh NUMERIC(6,2) NOT NULL DEFAULT 40;
 
 -- Charging stations (network locations)
 CREATE TABLE IF NOT EXISTS stations (
@@ -86,14 +89,16 @@ CREATE TABLE IF NOT EXISTS charging_sessions (
     energy_kwh NUMERIC(8,3) NOT NULL DEFAULT 0,
     cost NUMERIC(10,2) NOT NULL DEFAULT 0,
     start_battery_pct SMALLINT NOT NULL DEFAULT 20,
-    auto_stop_pct SMALLINT
+    auto_stop_pct SMALLINT,
+    battery_capacity_kwh NUMERIC(6,2) NOT NULL DEFAULT 40
 );
 
--- Idempotent for databases that already had charging_sessions before this
--- column existed (ADD COLUMN IF NOT EXISTS is a safe no-op on fresh installs
+-- Idempotent for databases that already had charging_sessions before these
+-- columns existed (ADD COLUMN IF NOT EXISTS is a safe no-op on fresh installs
 -- where CREATE TABLE just created them).
 ALTER TABLE charging_sessions ADD COLUMN IF NOT EXISTS start_battery_pct SMALLINT NOT NULL DEFAULT 20;
 ALTER TABLE charging_sessions ADD COLUMN IF NOT EXISTS auto_stop_pct SMALLINT;
+ALTER TABLE charging_sessions ADD COLUMN IF NOT EXISTS battery_capacity_kwh NUMERIC(6,2) NOT NULL DEFAULT 40;
 
 -- Wallet transactions (top-ups, charges, refunds)
 CREATE TABLE IF NOT EXISTS wallet_transactions (
