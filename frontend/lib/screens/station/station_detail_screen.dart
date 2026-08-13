@@ -94,10 +94,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 
   Future<void> _startChargingNow(BuildContext context, Station station, Connector connector) async {
+    final autoStopPct = await _showAutoStopSheet(context);
+    if (autoStopPct == null || !context.mounted) return; // user cancelled the sheet
+
     final sessionProvider = context.read<SessionProvider>();
     final ok = await sessionProvider.startCharging(
       stationId: station.id,
       connectorId: connector.id,
+      autoStopPct: autoStopPct == 100 ? null : autoStopPct,
     );
     if (!context.mounted) return;
     if (ok) {
@@ -109,6 +113,64 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         SnackBar(content: Text(sessionProvider.error ?? 'Could not start charging')),
       );
     }
+  }
+
+  /// Shows a bottom sheet to pick the Auto Stop battery target (10 steps of
+  /// 10%, default 100 = charge to full). Returns the chosen percentage, or
+  /// null if the user dismissed the sheet without confirming.
+  Future<int?> _showAutoStopSheet(BuildContext context) async {
+    int selected = 100;
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: AppColors.chromeMist,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Auto Stop charging at',
+                  style: GoogleFonts.baloo2(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deepAzure)),
+              const SizedBox(height: 4),
+              Text('Charging stops automatically once the battery reaches this level.',
+                  style: GoogleFonts.nunitoSans(color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12.5)),
+              const SizedBox(height: 12),
+              GlassPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                radius: 20,
+                child: Column(
+                  children: [
+                    Text('$selected%',
+                        style: GoogleFonts.baloo2(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.skyBlue)),
+                    Slider(
+                      value: selected.toDouble(),
+                      min: 10,
+                      max: 100,
+                      divisions: 9, // 10 steps of 10%: 10,20,...,100
+                      activeColor: AppColors.skyBlue,
+                      label: '$selected%',
+                      onChanged: (v) => setSheetState(() => selected = v.round()),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              EnergyOrbButton(
+                label: 'Start charging',
+                icon: Icons.bolt_rounded,
+                width: double.infinity,
+                onPressed: () => Navigator.pop(ctx, selected),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _infoChip(IconData icon, String label, Color fg, Color bg) {
