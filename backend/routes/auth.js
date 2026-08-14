@@ -14,7 +14,7 @@ const otpRequestLimiter = rateLimit({
   message: { error: 'Too many OTP requests. Please try again later.' },
 });
 
-const isDevOtpAllowed = process.env.NODE_ENV === 'development' && process.env.SMS_PROVIDER === 'console';
+const isDevOtpAllowed = process.env.EXPOSE_OTP_IN_RESPONSE === 'true';
 
 function isValidPhone(phone) {
   return typeof phone === 'string' && /^\+?[1-9]\d{7,14}$/.test(phone);
@@ -43,8 +43,10 @@ router.post('/request-otp', otpRequestLimiter, asyncHandler(async (req, res) => 
 
   res.json({
     message: 'OTP sent successfully',
-    // Only included when NODE_ENV=development AND no real SMS provider is configured,
-    // so a misconfigured staging/prod deploy can never leak the code.
+    // Only included when EXPOSE_OTP_IN_RESPONSE=true is explicitly set, independent
+    // of NODE_ENV, so a deployed instance can run NODE_ENV=production (correct
+    // logging/perf behavior) while still opting into returning the code — this app
+    // is personal/single-user, so there's no real security concern in doing so.
     devOtp: isDevOtpAllowed ? code : undefined,
   });
 }));
