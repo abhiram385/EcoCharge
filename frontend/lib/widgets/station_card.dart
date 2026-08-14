@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/station.dart';
+import '../utils/directions.dart';
 import 'aero/glass_panel.dart';
 
 class StationCard extends StatelessWidget {
@@ -64,6 +65,11 @@ class StationCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.directions_rounded, color: AppColors.skyBlue),
+                tooltip: 'Get directions',
+                onPressed: () => openDirections(station.latitude, station.longitude),
               ),
               const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
             ],
