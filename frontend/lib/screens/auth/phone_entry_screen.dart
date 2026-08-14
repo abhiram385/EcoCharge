@@ -26,7 +26,9 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => OtpVerifyScreen(phone: phone)),
+        MaterialPageRoute(
+          builder: (_) => OtpVerifyScreen(phone: phone, devOtp: auth.lastDevOtp),
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
