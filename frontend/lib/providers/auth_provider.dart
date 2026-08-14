@@ -9,6 +9,7 @@ class AuthProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
   bool checkingSession = true;
+  String? lastDevOtp;
 
   Future<void> bootstrap() async {
     checkingSession = true;
@@ -28,7 +29,8 @@ class AuthProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await _api.requestOtp(phone);
+      final data = await _api.requestOtp(phone);
+      lastDevOtp = data['devOtp'] as String?;
       isLoading = false;
       notifyListeners();
       return true;
