@@ -13,6 +13,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val secretsPropertiesFile = rootProject.file("secrets.properties")
+val secretsProperties = Properties()
+if (secretsPropertiesFile.exists()) {
+    secretsProperties.load(FileInputStream(secretsPropertiesFile))
+}
+
 android {
     namespace = "com.example.ecocharge"
     compileSdk = flutter.compileSdkVersion
@@ -32,6 +38,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["MAPS_API_KEY"] = secretsProperties.getProperty("MAPS_API_KEY", "")
     }
 
     signingConfigs {
