@@ -13,6 +13,9 @@ frontend/.pub-cache/
 frontend/.pub/
 frontend/android/.gradle/
 frontend/android/local.properties
+frontend/android/key.properties
+frontend/android/app/*.jks
+frontend/android/secrets.properties
 frontend/ios/Flutter/Flutter.podspec
 frontend/ios/Pods/
 frontend/*.iml

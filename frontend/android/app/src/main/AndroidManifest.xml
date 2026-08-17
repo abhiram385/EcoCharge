@@ -7,9 +7,10 @@
         android:label="EcoCharge"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- Sourced from android/secrets.properties (gitignored) via manifestPlaceholders in build.gradle.kts -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDUgBv9o8VuzD7nUrIIGkQGuHPsvm1qmiI"/>
+            android:value="${MAPS_API_KEY}"/>
 
         <activity
             android:name=".MainActivity"

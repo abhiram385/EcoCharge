@@ -7,6 +7,7 @@ import '../../models/station.dart';
 import '../../providers/station_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/api_service.dart';
+import '../../utils/directions.dart';
 import '../../widgets/aero/aero_background.dart';
 import '../../widgets/aero/glass_panel.dart';
 import '../../widgets/aero/energy_orb_button.dart';
@@ -62,6 +63,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         AppColors.leafPale,
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => openDirections(station.latitude, station.longitude),
+                    icon: const Icon(Icons.directions_rounded),
+                    label: const Text('Get directions'),
                   ),
                   if (station.amenities.isNotEmpty) ...[
                     const SizedBox(height: 22),

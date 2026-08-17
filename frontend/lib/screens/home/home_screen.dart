@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   GoogleMapController? _mapController;
-  LatLng _center = const LatLng(23.2599, 77.4126); // Default: Bhopal
+  LatLng _center = const LatLng(17.3850, 78.4867); // Default: Hyderabad
   bool _mapView = false;
 
   @override
@@ -54,23 +54,38 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadLocationAndStations() async {
+    // Show results immediately using the last-known (or default) position —
+    // don't make the user wait on a fresh GPS fix, which can take several
+    // seconds on a real device (instant on an emulator, which is why this
+    // wasn't noticeable before).
+    try {
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        _center = LatLng(lastKnown.latitude, lastKnown.longitude);
+      }
+    } catch (_) {
+      // Fall back to the default center silently.
+    }
+    if (!mounted) return;
+    context.read<StationProvider>().loadNearby(_center.latitude, _center.longitude);
+
+    // Refresh in the background once a precise fix is available.
     try {
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         await Geolocator.requestPermission();
       }
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (serviceEnabled) {
-        final pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-        );
-        _center = LatLng(pos.latitude, pos.longitude);
-      }
+      if (!serviceEnabled) return;
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+      if (!mounted) return;
+      _center = LatLng(pos.latitude, pos.longitude);
+      context.read<StationProvider>().loadNearby(_center.latitude, _center.longitude);
     } catch (_) {
-      // Fall back to default center silently; user can still browse.
+      // Precise fix unavailable; the last-known/default result already loaded above stands.
     }
-    if (!mounted) return;
-    context.read<StationProvider>().loadNearby(_center.latitude, _center.longitude);
   }
 
   @override

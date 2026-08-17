@@ -11,7 +11,8 @@ import '../hub/landing_hub_screen.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
   final String phone;
-  const OtpVerifyScreen({super.key, required this.phone});
+  final String? devOtp;
+  const OtpVerifyScreen({super.key, required this.phone, this.devOtp});
 
   @override
   State<OtpVerifyScreen> createState() => _OtpVerifyScreenState();
@@ -19,6 +20,16 @@ class OtpVerifyScreen extends StatefulWidget {
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   String _code = '';
+  late final TextEditingController _pinController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pinController = TextEditingController(text: widget.devOtp ?? '');
+    if (widget.devOtp != null) {
+      _code = widget.devOtp!;
+    }
+  }
 
   Future<void> _verify() async {
     if (_code.length != 6) return;
@@ -66,6 +77,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
                   child: PinCodeTextField(
                     appContext: context,
+                    controller: _pinController,
                     length: 6,
                     onChanged: (v) => setState(() => _code = v),
                     onCompleted: (v) => _verify(),
@@ -85,6 +97,13 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                     ),
                   ),
                 ),
+                if (widget.devOtp != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Dev code (no SMS configured): ${widget.devOtp}',
+                    style: GoogleFonts.nunitoSans(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 EnergyOrbButton(
                   label: 'Verify & continue',
@@ -97,7 +116,16 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(
-                    onPressed: () => context.read<AuthProvider>().requestOtp(widget.phone),
+                    onPressed: () async {
+                      final auth = context.read<AuthProvider>();
+                      await auth.requestOtp(widget.phone);
+                      if (!mounted) return;
+                      final newCode = auth.lastDevOtp;
+                      if (newCode != null) {
+                        setState(() => _code = newCode);
+                        _pinController.text = newCode;
+                      }
+                    },
                     child: Text('Resend code', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700)),
                   ),
                 ),

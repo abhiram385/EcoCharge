@@ -1,52 +1,100 @@
--- Demo seed data centered around Bhopal, MP for local testing.
+-- Demo seed data centered around Hyderabad, Telangana for local testing.
 -- Feel free to replace with real station data per city.
 
 INSERT INTO stations (name, address, city, latitude, longitude, rating, is_open_24h, amenities)
 VALUES
- ('Arera Colony Green Hub', 'E-8 Arera Colony', 'Bhopal', 23.2260, 77.4360, 4.7, TRUE, ARRAY['Cafe','Restroom','WiFi']),
- ('DB City Charge Point', 'DB City Mall, Zone-I', 'Bhopal', 23.2340, 77.4090, 4.5, TRUE, ARRAY['Mall','Restroom']),
- ('MP Nagar Fast Charge', 'Zone II, MP Nagar', 'Bhopal', 23.2350, 77.4340, 4.3, TRUE, ARRAY['Cafe']),
- ('Kolar Road Station', 'Kolar Road', 'Bhopal', 23.1850, 77.4230, 4.2, FALSE, ARRAY['Restroom']),
- ('Habibganj Rail Charge', 'Near Habibganj Station', 'Bhopal', 23.2140, 77.4360, 4.6, TRUE, ARRAY['WiFi','Restroom','Cafe'])
+ ('Banjara Hills Green Hub', 'Road No. 12, Banjara Hills', 'Hyderabad', 17.4156, 78.4347, 4.7, TRUE, ARRAY['Cafe','Restroom','WiFi']),
+ ('Hitech City Fast Charge', 'Near Cyber Towers, Hitech City', 'Hyderabad', 17.4435, 78.3772, 4.5, TRUE, ARRAY['Mall','Restroom']),
+ ('Gachibowli Charge Point', 'DLF Cyber City, Gachibowli', 'Hyderabad', 17.4401, 78.3489, 4.3, TRUE, ARRAY['Cafe']),
+ ('Jubilee Hills Station', 'Road No. 36, Jubilee Hills', 'Hyderabad', 17.4325, 78.4071, 4.2, FALSE, ARRAY['Restroom']),
+ ('Secunderabad Rail Charge', 'Near Secunderabad Railway Station', 'Hyderabad', 17.4399, 78.5019, 4.6, TRUE, ARRAY['WiFi','Restroom','Cafe'])
 ON CONFLICT DO NOTHING;
 
 -- Attach a couple of connectors to each station
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'CCS2', 60, 18.50, 'available' FROM stations WHERE name = 'Arera Colony Green Hub';
+SELECT id, 'CCS2', 60, 18.50, 'available' FROM stations WHERE name = 'Banjara Hills Green Hub';
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'Type2', 22, 14.00, 'available' FROM stations WHERE name = 'Arera Colony Green Hub';
+SELECT id, 'Type2', 22, 14.00, 'available' FROM stations WHERE name = 'Banjara Hills Green Hub';
 
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'CCS2', 50, 19.00, 'occupied' FROM stations WHERE name = 'DB City Charge Point';
+SELECT id, 'CCS2', 50, 19.00, 'occupied' FROM stations WHERE name = 'Hitech City Fast Charge';
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'CHAdeMO', 50, 19.00, 'available' FROM stations WHERE name = 'DB City Charge Point';
+SELECT id, 'CHAdeMO', 50, 19.00, 'available' FROM stations WHERE name = 'Hitech City Fast Charge';
 
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'Type2', 22, 13.50, 'available' FROM stations WHERE name = 'MP Nagar Fast Charge';
+SELECT id, 'Type2', 22, 13.50, 'available' FROM stations WHERE name = 'Gachibowli Charge Point';
 
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'CCS2', 30, 16.00, 'offline' FROM stations WHERE name = 'Kolar Road Station';
+SELECT id, 'CCS2', 30, 16.00, 'offline' FROM stations WHERE name = 'Jubilee Hills Station';
 
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'CCS2', 120, 21.00, 'available' FROM stations WHERE name = 'Habibganj Rail Charge';
+SELECT id, 'CCS2', 120, 21.00, 'available' FROM stations WHERE name = 'Secunderabad Rail Charge';
 INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
-SELECT id, 'Type2', 22, 14.50, 'available' FROM stations WHERE name = 'Habibganj Rail Charge';
+SELECT id, 'Type2', 22, 14.50, 'available' FROM stations WHERE name = 'Secunderabad Rail Charge';
+
+-- Real, currently-operational Hyderabad EV charging stations (name, address,
+-- and coordinates sourced from the Google Places API; connector types,
+-- power, pricing, and status are not available from Places and are
+-- app-invented, matching the style of the demo stations above).
+INSERT INTO stations (name, address, city, latitude, longitude, rating, is_open_24h, amenities)
+VALUES
+ ('Tata Power Charging Station', '1, Greenlands Rd, Nishat Bagh Colony, Somajiguda', 'Hyderabad', 17.4298154, 78.4564473, 4.4, TRUE, ARRAY['WiFi']),
+ ('EV DOCK Charging Station', 'Bhaskar Plaza, Road No. 1, Banjara Hills', 'Hyderabad', 17.4120536, 78.4500953, 4.0, FALSE, ARRAY['Restroom']),
+ ('Zeon Charging Station', 'Ashoka One Mall, Road Number 3, Kukatpally', 'Hyderabad', 17.4794297, 78.4177705, 4.9, TRUE, ARRAY['Mall','Restroom','Cafe']),
+ ('LionCharge Charging Station', 'BD Colony, Kundanbagh Colony, Begumpet', 'Hyderabad', 17.4365936, 78.4567269, 5.0, TRUE, ARRAY['WiFi']),
+ ('Reliable Charge EV Charging Station', 'Central Mall, Somajiguda', 'Hyderabad', 17.4267023, 78.4530281, 4.2, TRUE, ARRAY['Mall','Restroom']),
+ ('Thunder Plus Charging Station', 'Secunderabad Railway Station parking, Khairtabad', 'Hyderabad', 17.4242015, 78.4629467, 3.0, TRUE, ARRAY['Restroom']),
+ ('Tata Power Charging Station (Gateway Mall)', 'B1-Level, Gateway Mall, IDA Kukatpally', 'Hyderabad', 17.476998, 78.42272100000001, 5.0, TRUE, ARRAY['Mall','Cafe','Restroom']),
+ ('ChargeZone', 'Hyderabad Marriott Hotel, Tank Bund Rd', 'Hyderabad', 17.4252119, 78.4869532, 4.0, TRUE, ARRAY['Cafe','WiFi'])
+ON CONFLICT DO NOTHING;
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 60, 19.00, 'available' FROM stations WHERE name = 'Tata Power Charging Station';
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'Type2', 22, 14.50, 'available' FROM stations WHERE name = 'Tata Power Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 50, 18.00, 'available' FROM stations WHERE name = 'EV DOCK Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 60, 20.00, 'occupied' FROM stations WHERE name = 'Zeon Charging Station';
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'Type2', 22, 15.00, 'available' FROM stations WHERE name = 'Zeon Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 50, 18.50, 'available' FROM stations WHERE name = 'LionCharge Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'Type2', 22, 14.00, 'available' FROM stations WHERE name = 'Reliable Charge EV Charging Station';
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 40, 17.50, 'offline' FROM stations WHERE name = 'Reliable Charge EV Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 30, 16.50, 'available' FROM stations WHERE name = 'Thunder Plus Charging Station';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 60, 19.00, 'available' FROM stations WHERE name = 'Tata Power Charging Station (Gateway Mall)';
+
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CCS2', 50, 19.50, 'available' FROM stations WHERE name = 'ChargeZone';
+INSERT INTO connectors (station_id, connector_type, power_kw, price_per_kwh, status)
+SELECT id, 'CHAdeMO', 50, 19.50, 'available' FROM stations WHERE name = 'ChargeZone';
 
 -- Battery swap points (fake data) — for lightweight two-wheelers (Type2
 -- pack class) that swap instead of charge.
 INSERT INTO swap_points (name, address, city, latitude, longitude, rating, is_open_24h, amenities)
 VALUES
- ('New Market Swap Hub', '11 New Market', 'Bhopal', 23.2599, 77.4014, 4.6, TRUE, ARRAY['Restroom','WiFi']),
- ('Bittan Market Swap Point', 'Bittan Market', 'Bhopal', 23.2280, 77.4380, 4.4, TRUE, ARRAY['Cafe']),
- ('Ashoka Garden Swap Point', 'Ashoka Garden', 'Bhopal', 23.2450, 77.4460, 4.3, FALSE, ARRAY['Restroom']),
- ('Board Office Swap Hub', 'Board Office Square', 'Bhopal', 23.2320, 77.4160, 4.7, TRUE, ARRAY['Cafe','WiFi'])
+ ('Ameerpet Swap Hub', 'SR Nagar Main Rd, Ameerpet', 'Hyderabad', 17.4374, 78.4482, 4.6, TRUE, ARRAY['Restroom','WiFi']),
+ ('Madhapur Swap Point', 'Ayyappa Society, Madhapur', 'Hyderabad', 17.4483, 78.3915, 4.4, TRUE, ARRAY['Cafe']),
+ ('Dilsukhnagar Swap Point', 'Chaitanyapuri, Dilsukhnagar', 'Hyderabad', 17.3687, 78.5247, 4.3, FALSE, ARRAY['Restroom']),
+ ('Kukatpally Swap Hub', 'KPHB Colony, Kukatpally', 'Hyderabad', 17.4849, 78.4108, 4.7, TRUE, ARRAY['Cafe','WiFi'])
 ON CONFLICT DO NOTHING;
 
 INSERT INTO swap_packs (swap_point_id, pack_type, capacity_kwh, price_per_swap, available_count, total_count)
-SELECT id, 'Type2', 3.5, 149.00, 6, 8 FROM swap_points WHERE name = 'New Market Swap Hub';
+SELECT id, 'Type2', 3.5, 149.00, 6, 8 FROM swap_points WHERE name = 'Ameerpet Swap Hub';
 INSERT INTO swap_packs (swap_point_id, pack_type, capacity_kwh, price_per_swap, available_count, total_count)
-SELECT id, 'Type2', 3.5, 149.00, 2, 6 FROM swap_points WHERE name = 'Bittan Market Swap Point';
+SELECT id, 'Type2', 3.5, 149.00, 2, 6 FROM swap_points WHERE name = 'Madhapur Swap Point';
 INSERT INTO swap_packs (swap_point_id, pack_type, capacity_kwh, price_per_swap, available_count, total_count)
-SELECT id, 'Type2', 3.5, 159.00, 0, 5 FROM swap_points WHERE name = 'Ashoka Garden Swap Point';
+SELECT id, 'Type2', 3.5, 159.00, 0, 5 FROM swap_points WHERE name = 'Dilsukhnagar Swap Point';
 INSERT INTO swap_packs (swap_point_id, pack_type, capacity_kwh, price_per_swap, available_count, total_count)
-SELECT id, 'Type2', 3.5, 139.00, 9, 10 FROM swap_points WHERE name = 'Board Office Swap Hub';
+SELECT id, 'Type2', 3.5, 139.00, 9, 10 FROM swap_points WHERE name = 'Kukatpally Swap Hub';

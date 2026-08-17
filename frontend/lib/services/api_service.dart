@@ -6,8 +6,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Change [baseUrl] to point at your deployed backend, or use
 /// --dart-define=API_BASE_URL=https://your-api.example.com when building.
 class ApiService {
-  static const _defaultBaseUrl = 'http://10.0.2.2:4000'; // Android emulator -> localhost
-  static const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: _defaultBaseUrl);
+  static const baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://ecocharge-j8fp.onrender.com',
+  );
 
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'ecocharge_auth_token';
