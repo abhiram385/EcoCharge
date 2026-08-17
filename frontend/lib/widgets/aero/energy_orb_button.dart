@@ -46,7 +46,8 @@ class _EnergyOrbButtonState extends State<EnergyOrbButton> with TickerProviderSt
   bool get _enabled => widget.onPressed != null && !widget.loading;
 
   void _addRipple(Offset localPos) {
-    final ripple = _Ripple(localPos);
+    final tint = widget.green ? AppColors.leafGreen : AppColors.skyBlue;
+    final ripple = _Ripple(localPos, tint);
     setState(() => _ripples.add(ripple));
   }
 
@@ -82,9 +83,9 @@ class _EnergyOrbButtonState extends State<EnergyOrbButton> with TickerProviderSt
                 boxShadow: _enabled
                     ? [
                         BoxShadow(
-                          color: glow.withValues(alpha: 0.35 * pulse),
-                          blurRadius: 22 + 10 * pulse,
-                          spreadRadius: 1,
+                          color: glow.withValues(alpha: 0.5 * pulse),
+                          blurRadius: 30 + 14 * pulse,
+                          spreadRadius: 2,
                         ),
                         const BoxShadow(color: Color(0x1F000000), blurRadius: 6, offset: Offset(0, 3)),
                       ]
@@ -165,8 +166,9 @@ class _EnergyOrbButtonState extends State<EnergyOrbButton> with TickerProviderSt
 
 class _Ripple {
   final Offset origin;
+  final Color tint;
   late final AnimationController controller;
-  _Ripple(this.origin);
+  _Ripple(this.origin, this.tint);
 }
 
 class _RippleWidget extends StatefulWidget {
@@ -195,18 +197,19 @@ class _RippleWidgetState extends State<_RippleWidget> with SingleTickerProviderS
       animation: widget.ripple.controller,
       builder: (context, _) {
         final t = widget.ripple.controller.value;
+        final splashColor = Color.lerp(Colors.white, widget.ripple.tint, 0.55)!;
         return Positioned(
-          left: widget.ripple.origin.dx - 60 * t,
-          top: widget.ripple.origin.dy - 60 * t,
+          left: widget.ripple.origin.dx - 80 * t,
+          top: widget.ripple.origin.dy - 80 * t,
           child: IgnorePointer(
             child: Opacity(
               opacity: (1 - t).clamp(0, 1),
               child: Container(
-                width: 120 * t,
-                height: 120 * t,
+                width: 160 * t,
+                height: 160 * t,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: splashColor.withValues(alpha: 0.5),
                 ),
               ),
             ),

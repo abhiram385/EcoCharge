@@ -7,6 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node db/migrate.js",
+    "db:seed": "node db/seed.js",
+    "db:verify": "node db/verify.js",
+    "db:peek": "node db/peek.js",
     "test": "jest"
   },
   "dependencies": {

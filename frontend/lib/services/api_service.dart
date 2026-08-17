@@ -93,6 +93,7 @@ class ApiService {
     required double batteryCapacityKwh,
     String? regNumber,
     bool isDefault = false,
+    bool swapCapable = false,
   }) async {
     final res = await http.post(
       _uri('/api/vehicles'),
@@ -104,6 +105,7 @@ class ApiService {
         'batteryCapacityKwh': batteryCapacityKwh,
         'regNumber': regNumber,
         'isDefault': isDefault,
+        'swapCapable': swapCapable,
       }),
     );
     return await _handle(res);
@@ -194,6 +196,50 @@ class ApiService {
     final res = await http.get(_uri('/api/sessions/history'), headers: await _headers());
     final data = await _handle(res);
     return data['sessions'];
+  }
+
+  // ---------- Battery swap ----------
+
+  Future<List<dynamic>> nearbySwapPoints(double lat, double lng, {double radiusKm = 15}) async {
+    final res = await http.get(
+      _uri('/api/swap/nearby', {
+        'lat': lat.toString(),
+        'lng': lng.toString(),
+        'radiusKm': radiusKm.toString(),
+      }),
+      headers: await _headers(),
+    );
+    final data = await _handle(res);
+    return data['swapPoints'];
+  }
+
+  Future<Map<String, dynamic>> swapPointDetail(String id) async {
+    final res = await http.get(_uri('/api/swap/$id'), headers: await _headers());
+    return await _handle(res);
+  }
+
+  Future<Map<String, dynamic>> redeemSwap(String swapPointId, String packId, {String? vehicleId}) async {
+    final res = await http.post(
+      _uri('/api/swap/$swapPointId/redeem'),
+      headers: await _headers(),
+      body: jsonEncode({'packId': packId, 'vehicleId': vehicleId}),
+    );
+    return await _handle(res);
+  }
+
+  Future<List<dynamic>> swapHistory() async {
+    final res = await http.get(_uri('/api/swap/history/me'), headers: await _headers());
+    final data = await _handle(res);
+    return data['swaps'];
+  }
+
+  Future<Map<String, dynamic>> updateVehicle(String id, {String? regNumber, int? batteryLevelPct}) async {
+    final res = await http.patch(
+      _uri('/api/vehicles/$id'),
+      headers: await _headers(),
+      body: jsonEncode({'regNumber': regNumber, 'batteryLevelPct': batteryLevelPct}),
+    );
+    return await _handle(res);
   }
 
   // ---------- Wallet ----------

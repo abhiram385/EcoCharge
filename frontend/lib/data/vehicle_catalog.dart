@@ -8,12 +8,14 @@ class VehicleCatalogEntry {
   final String model;
   final double capacityKwh;
   final String connectorType;
+  final bool swapCapable;
 
   const VehicleCatalogEntry({
     required this.make,
     required this.model,
     required this.capacityKwh,
     required this.connectorType,
+    this.swapCapable = false,
   });
 
   String get displayName => '$make $model';
@@ -42,9 +44,13 @@ const List<VehicleCatalogEntry> kVehicleCatalog = [
   VehicleCatalogEntry(make: 'Kia', model: 'EV6', capacityKwh: 77.4, connectorType: 'CCS2'),
   VehicleCatalogEntry(make: 'Kia', model: 'Syros EV', capacityKwh: 51.4, connectorType: 'CCS2'),
   VehicleCatalogEntry(make: 'Volvo', model: 'EX30', capacityKwh: 69, connectorType: 'CCS2'),
-  // Two-wheelers
-  VehicleCatalogEntry(make: 'Ola', model: 'S1 Pro', capacityKwh: 4, connectorType: 'Type2'),
+  // Two-wheelers (fixed-battery, charge only)
   VehicleCatalogEntry(make: 'Ather', model: '450X', capacityKwh: 3.7, connectorType: 'Type2'),
   VehicleCatalogEntry(make: 'TVS', model: 'iQube', capacityKwh: 3.04, connectorType: 'Type2'),
-  VehicleCatalogEntry(make: 'Bajaj', model: 'Chetak', capacityKwh: 3, connectorType: 'Type2'),
+  // Swap-capable two-wheelers — light packs designed to be pulled and
+  // swapped rather than plugged in and waited on.
+  VehicleCatalogEntry(make: 'Ola', model: 'S1 Pro', capacityKwh: 4, connectorType: 'Type2', swapCapable: true),
+  VehicleCatalogEntry(make: 'Bajaj', model: 'Chetak', capacityKwh: 3, connectorType: 'Type2', swapCapable: true),
+  VehicleCatalogEntry(make: 'Bounce', model: 'Infinity E1', capacityKwh: 2.2, connectorType: 'Type2', swapCapable: true),
+  VehicleCatalogEntry(make: 'Honda', model: 'QC1', capacityKwh: 1.5, connectorType: 'Type2', swapCapable: true),
 ];

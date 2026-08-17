@@ -7,7 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/aero/aero_background.dart';
 import '../../widgets/aero/glass_panel.dart';
 import '../../widgets/aero/energy_orb_button.dart';
-import '../home/home_shell.dart';
+import '../hub/landing_hub_screen.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
   final String phone;
@@ -27,7 +27,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+        MaterialPageRoute(builder: (_) => const LandingHubScreen()),
         (route) => false,
       );
     } else {

@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../widgets/aero/aero_background.dart';
 import 'auth/phone_entry_screen.dart';
-import 'home/home_shell.dart';
+import 'hub/landing_hub_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (!mounted) return;
     if (loggedIn) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+        MaterialPageRoute(builder: (_) => const LandingHubScreen()),
       );
     } else {
       Navigator.of(context).pushReplacement(

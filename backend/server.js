@@ -10,6 +10,7 @@ const vehicleRoutes = require('./routes/vehicles');
 const bookingRoutes = require('./routes/bookings');
 const sessionRoutes = require('./routes/sessions');
 const walletRoutes = require('./routes/wallet');
+const swapRoutes = require('./routes/swap');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/swap', swapRoutes);
 
 // Centralized error handler
 app.use((err, req, res, next) => {

@@ -32,7 +32,8 @@ npm install
 
 # Create the Postgres database first, e.g.:
 #   createdb ecocharge
-npm run migrate           # applies schema.sql + seed.sql
+npm run migrate            # applies versioned migrations in backend/db/migrations
+npm run db:seed            # optional: demo Bhopal stations (dev convenience, not run in prod)
 
 npm run dev                # http://localhost:4000
 ```

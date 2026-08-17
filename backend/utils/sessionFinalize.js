@@ -1,3 +1,5 @@
+const { computeBatteryPct } = require('./batterySimulation');
+
 async function finalizeSession(pool, { sessionId, userId, connectorId, energyKwh, cost }) {
   const client = await pool.connect();
   try {
@@ -38,6 +40,14 @@ async function finalizeSession(pool, { sessionId, userId, connectorId, energyKwh
     );
 
     await client.query("UPDATE connectors SET status = 'available' WHERE id = $1", [connectorId]);
+
+    const finishedSession = updatedSession.rows[0];
+    if (finishedSession.vehicle_id) {
+      const finalPct = Math.round(
+        computeBatteryPct(finishedSession.start_battery_pct, finishedSession.energy_kwh, finishedSession.battery_capacity_kwh)
+      );
+      await client.query('UPDATE vehicles SET battery_level_pct = $1 WHERE id = $2', [finalPct, finishedSession.vehicle_id]);
+    }
 
     await client.query('COMMIT');
     return { ok: true, session: updatedSession.rows[0] };

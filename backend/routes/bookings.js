@@ -46,11 +46,23 @@ router.post('/', asyncHandler(async (req, res) => {
     return res.status(409).json({ error: 'This slot is already booked. Please choose another time.' });
   }
 
-  const { rows } = await pool.query(
-    `INSERT INTO bookings (user_id, station_id, connector_id, vehicle_id, slot_start, slot_end)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [req.user.id, stationId, connectorId, vehicleId || null, slotStart, slotEnd]
-  );
+  // The overlap SELECT above is a fast-path check; the DB-level exclusion
+  // constraint (bookings_no_overlap) is what actually closes the race
+  // against a concurrent request for the same slot.
+  let rows;
+  try {
+    ({ rows } = await pool.query(
+      `INSERT INTO bookings (user_id, station_id, connector_id, vehicle_id, slot_start, slot_end)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.user.id, stationId, connectorId, vehicleId || null, slotStart, slotEnd]
+    ));
+  } catch (err) {
+    if (err.code === '23P01') {
+      // exclusion_violation
+      return res.status(409).json({ error: 'This slot is already booked. Please choose another time.' });
+    }
+    throw err;
+  }
 
   res.status(201).json({ booking: formatBooking(rows[0]) });
 }));

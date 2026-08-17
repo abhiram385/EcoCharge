@@ -9,7 +9,7 @@ class AeroBackground extends StatefulWidget {
   final Widget child;
   final int bubbleCount;
 
-  const AeroBackground({super.key, required this.child, this.bubbleCount = 6});
+  const AeroBackground({super.key, required this.child, this.bubbleCount = 9});
 
   @override
   State<AeroBackground> createState() => _AeroBackgroundState();
@@ -28,7 +28,7 @@ class _AeroBackgroundState extends State<AeroBackground> with SingleTickerProvid
       return _Bubble(
         dx: rand.nextDouble(),
         dy: rand.nextDouble(),
-        size: 40.0 + rand.nextDouble() * 90,
+        size: 50.0 + rand.nextDouble() * 120,
         speed: 0.4 + rand.nextDouble() * 0.6,
         drift: rand.nextDouble() * pi * 2,
         green: i.isEven,
@@ -73,12 +73,12 @@ class _AeroBackgroundState extends State<AeroBackground> with SingleTickerProvid
                               center: const Alignment(-0.35, -0.4),
                               colors: b.green
                                   ? [
-                                      AppColors.leafGreen.withValues(alpha: 0.22),
-                                      AppColors.leafGreen.withValues(alpha: 0.02),
+                                      AppColors.leafGreen.withValues(alpha: 0.38),
+                                      AppColors.leafGreen.withValues(alpha: 0.04),
                                     ]
                                   : [
-                                      AppColors.skyBlue.withValues(alpha: 0.22),
-                                      AppColors.skyBlue.withValues(alpha: 0.02),
+                                      AppColors.skyBlue.withValues(alpha: 0.38),
+                                      AppColors.skyBlue.withValues(alpha: 0.04),
                                     ],
                             ),
                           ),

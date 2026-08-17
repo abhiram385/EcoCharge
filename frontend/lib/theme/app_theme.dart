@@ -8,24 +8,24 @@ import 'package:google_fonts/google_fonts.dart';
 /// generic ink splashes.
 class AppColors {
   // Base "sky" gradient the whole app sits on top of.
-  static const Color skyTop = Color(0xFFDFF3FC);
-  static const Color skyBottom = Color(0xFFF3FBFE);
-  static const Color background = Color(0xFFEFF9FC);
+  static const Color skyTop = Color(0xFFB8E7FA);
+  static const Color skyBottom = Color(0xFFE3F6FC);
+  static const Color background = Color(0xFFDFF3FA);
 
   static const Color glass = Color(0xCCFFFFFF); // translucent glass panel fill
   static const Color glassHighlight = Color(0xF2FFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceMuted = Color(0xFFE7F5FA);
 
-  static const Color skyBlue = Color(0xFF4FC3F7); // primary — Aero glass blue
-  static const Color deepAzure = Color(0xFF0A5A82); // ink / deep accent
-  static const Color azureDark = Color(0xFF06405E);
+  static const Color skyBlue = Color(0xFF29B6F6); // primary — Aero glass blue
+  static const Color deepAzure = Color(0xFF094D70); // ink / deep accent
+  static const Color azureDark = Color(0xFF052F45);
 
-  static const Color leafGreen = Color(0xFF5FBF60); // eco accent
-  static const Color leafDark = Color(0xFF2F8F4E);
+  static const Color leafGreen = Color(0xFF43A047); // eco accent
+  static const Color leafDark = Color(0xFF256B37);
   static const Color leafPale = Color(0xFFE1F6E3);
 
-  static const Color sunGlow = Color(0xFFFFCF4D); // energy/charge glow, ratings
+  static const Color sunGlow = Color(0xFFFFB300); // energy/charge glow, ratings
   static const Color sunPale = Color(0xFFFFF3D6);
 
   static const Color chromeMist = Color(0xFFEAF6FA);
@@ -35,13 +35,13 @@ class AppColors {
   static const Color textSecondary = Color(0xFF4C7182);
   static const Color textMuted = Color(0xFF8FAFBB);
 
-  static const Color success = Color(0xFF2F8F4E);
+  static const Color success = Color(0xFF256B37);
   static const Color error = Color(0xFFE6624B);
   static const Color divider = Color(0xFFCDEBF5);
 
   // Connector status colors
-  static const Color statusAvailable = Color(0xFF2F8F4E);
-  static const Color statusOccupied = Color(0xFFFFCF4D);
+  static const Color statusAvailable = Color(0xFF256B37);
+  static const Color statusOccupied = Color(0xFFFFB300);
   static const Color statusOffline = Color(0xFFA9BFC7);
 
   static const LinearGradient skyGradient = LinearGradient(
@@ -53,13 +53,13 @@ class AppColors {
   static const LinearGradient orbGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7FD8FA), skyBlue, Color(0xFF1E97D1)],
+    colors: [Color(0xFF5CCBF5), skyBlue, Color(0xFF0D80B8)],
   );
 
   static const LinearGradient orbGradientGreen = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF9BE29C), leafGreen, leafDark],
+    colors: [Color(0xFF7AD07E), leafGreen, leafDark],
   );
 
   static const LinearGradient chromeSheen = LinearGradient(

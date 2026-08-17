@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/station_provider.dart';
 import 'providers/session_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/swap_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
@@ -22,6 +23,7 @@ class EcoChargeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => StationProvider()),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => SwapProvider()),
       ],
       child: MaterialApp(
         title: 'EcoCharge',

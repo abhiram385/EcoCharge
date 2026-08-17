@@ -98,6 +98,12 @@ router.post('/start', asyncHandler(async (req, res) => {
     res.status(201).json({ session: formatSession(session.rows[0], connector.rows[0]) });
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err.code === '23505') {
+      // unique_violation on idx_sessions_one_active_per_connector/_per_user —
+      // the pre-check above raced with a concurrent /start call; the DB
+      // constraint is what actually closes it.
+      return res.status(409).json({ error: 'This connector just became unavailable, or you already have an active session' });
+    }
     throw err;
   } finally {
     client.release();

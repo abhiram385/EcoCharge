@@ -1,4 +1,8 @@
--- EcoCharge database schema (PostgreSQL)
+-- EcoCharge database schema (PostgreSQL) — baseline
+--
+-- Safe to run against a database that already has these tables (everything
+-- is IF NOT EXISTS / ADD COLUMN IF NOT EXISTS), so this migration can be
+-- baselined against existing deployments without recreating or losing data.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

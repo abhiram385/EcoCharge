@@ -32,6 +32,8 @@ class Vehicle {
   final String? regNumber;
   final bool isDefault;
   final double batteryCapacityKwh;
+  final int batteryLevelPct;
+  final bool swapCapable;
 
   Vehicle({
     required this.id,
@@ -41,6 +43,8 @@ class Vehicle {
     this.regNumber,
     required this.isDefault,
     required this.batteryCapacityKwh,
+    this.batteryLevelPct = 50,
+    this.swapCapable = false,
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
@@ -52,6 +56,8 @@ class Vehicle {
       regNumber: json['regNumber'],
       isDefault: json['isDefault'] ?? false,
       batteryCapacityKwh: (json['batteryCapacityKwh'] as num).toDouble(),
+      batteryLevelPct: json['batteryLevelPct'] is int ? json['batteryLevelPct'] : 50,
+      swapCapable: json['swapCapable'] ?? false,
     );
   }
 

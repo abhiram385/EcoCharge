@@ -7,10 +7,9 @@
         android:label="EcoCharge"
         android:icon="@mipmap/ic_launcher">
 
-        <!-- TODO: Replace with your own Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY"/>
+            android:value="AIzaSyDUgBv9o8VuzD7nUrIIGkQGuHPsvm1qmiI"/>
 
         <activity
             android:name=".MainActivity"

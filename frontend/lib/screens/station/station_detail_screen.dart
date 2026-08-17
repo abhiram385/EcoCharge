@@ -11,7 +11,7 @@ import '../../widgets/aero/aero_background.dart';
 import '../../widgets/aero/glass_panel.dart';
 import '../../widgets/aero/energy_orb_button.dart';
 import '../booking/booking_screen.dart';
-import '../profile/profile_screen.dart';
+import '../vehicles/manage_vehicles_screen.dart';
 import '../session/active_session_screen.dart';
 
 class StationDetailScreen extends StatefulWidget {
@@ -118,7 +118,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         ),
       );
       if (wantsToAdd != true || !context.mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ManageVehiclesScreen()));
       if (!context.mounted) return;
       return _startChargingNow(context, station, connector);
     }
