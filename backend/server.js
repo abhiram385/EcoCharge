@@ -11,6 +11,7 @@ const bookingRoutes = require('./routes/bookings');
 const sessionRoutes = require('./routes/sessions');
 const walletRoutes = require('./routes/wallet');
 const swapRoutes = require('./routes/swap');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/swap', swapRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Centralized error handler
 app.use((err, req, res, next) => {

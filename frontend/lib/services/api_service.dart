@@ -235,12 +235,22 @@ class ApiService {
     return data['swaps'];
   }
 
-  Future<Map<String, dynamic>> updateVehicle(String id, {String? regNumber, int? batteryLevelPct}) async {
+  Future<Map<String, dynamic>> updateVehicle(String id, {String? regNumber, int? batteryLevelPct, bool? isDefault}) async {
     final res = await http.patch(
       _uri('/api/vehicles/$id'),
       headers: await _headers(),
-      body: jsonEncode({'regNumber': regNumber, 'batteryLevelPct': batteryLevelPct}),
+      body: jsonEncode({'regNumber': regNumber, 'batteryLevelPct': batteryLevelPct, 'isDefault': isDefault}),
     );
+    return await _handle(res);
+  }
+
+  // ---------- Dashboard ----------
+
+  Future<Map<String, dynamic>> getDashboard({double? lat, double? lng}) async {
+    final query = <String, String>{};
+    if (lat != null) query['lat'] = lat.toString();
+    if (lng != null) query['lng'] = lng.toString();
+    final res = await http.get(_uri('/api/dashboard', query), headers: await _headers());
     return await _handle(res);
   }
 

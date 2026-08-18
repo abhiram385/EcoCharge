@@ -45,9 +45,9 @@ router.post('/', asyncHandler(async (req, res) => {
   res.status(201).json({ vehicle: formatVehicle(rows[0]) });
 }));
 
-// PATCH /api/vehicles/:id { regNumber?, batteryLevelPct? }
+// PATCH /api/vehicles/:id { regNumber?, batteryLevelPct?, isDefault? }
 router.patch('/:id', asyncHandler(async (req, res) => {
-  const { regNumber, batteryLevelPct } = req.body;
+  const { regNumber, batteryLevelPct, isDefault } = req.body;
 
   if (batteryLevelPct !== undefined && batteryLevelPct !== null) {
     const pct = Number(batteryLevelPct);
@@ -56,17 +56,35 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     }
   }
 
-  const { rows } = await pool.query(
-    `UPDATE vehicles SET
-       reg_number = COALESCE($1, reg_number),
-       battery_level_pct = COALESCE($2, battery_level_pct)
-     WHERE id = $3 AND user_id = $4 RETURNING *`,
-    [regNumber ?? null, batteryLevelPct ?? null, req.params.id, req.user.id]
-  );
-  if (rows.length === 0) {
-    return res.status(404).json({ error: 'Vehicle not found' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (isDefault === true) {
+      await client.query('UPDATE vehicles SET is_default = FALSE WHERE user_id = $1', [req.user.id]);
+    }
+
+    const { rows } = await client.query(
+      `UPDATE vehicles SET
+         reg_number = COALESCE($1, reg_number),
+         battery_level_pct = COALESCE($2, battery_level_pct),
+         is_default = COALESCE($3, is_default)
+       WHERE id = $4 AND user_id = $5 RETURNING *`,
+      [regNumber ?? null, batteryLevelPct ?? null, isDefault ?? null, req.params.id, req.user.id]
+    );
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+
+    await client.query('COMMIT');
+    res.json({ vehicle: formatVehicle(rows[0]) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
-  res.json({ vehicle: formatVehicle(rows[0]) });
 }));
 
 // DELETE /api/vehicles/:id
