@@ -42,9 +42,23 @@ Health check: `GET http://localhost:4000/health`
 
 ### Wiring up real SMS
 
-`routes/auth.js` currently logs OTP codes to the console (and returns them
-in the API response outside of `production`) so you can test without an SMS
-account. Swap in Twilio/MSG91/etc. where marked in that file before shipping.
+OTP delivery goes through `utils/sms.js`. By default (`SMS_PROVIDER=console`,
+or unset) it logs the code to the console instead of sending SMS, so you can
+test without an SMS account — codes are also returned in the API response
+when `EXPOSE_OTP_IN_RESPONSE=true`.
+
+To send real texts, set these in `.env` and deploy config:
+
+```bash
+SMS_PROVIDER=twilio
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM_NUMBER=+15005550006   # a number/sender ID provisioned in Twilio
+```
+
+No code changes needed to switch — `request-otp` returns `502` if the SMS
+provider fails to send, so a failed delivery isn't reported to the client as
+success.
 
 ### API summary
 

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db/pool');
 const { generateOtp } = require('../utils/otp');
+const { sendOtpSms } = require('../utils/sms');
 const { requireAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/asyncHandler');
 
@@ -36,9 +37,11 @@ router.post('/request-otp', otpRequestLimiter, asyncHandler(async (req, res) => 
     [phone, code, expiresAt]
   );
 
-  // Plug in a real SMS provider here (Twilio, MSG91, etc.) in production.
-  if (process.env.SMS_PROVIDER === 'console' || !process.env.SMS_PROVIDER) {
-    console.log(`[OTP] Sending code ${code} to ${phone} (expires in ${process.env.OTP_EXPIRY_MINUTES || 5} min)`);
+  try {
+    await sendOtpSms(phone, code);
+  } catch (err) {
+    console.error('[OTP] Failed to send SMS:', err.message);
+    return res.status(502).json({ error: 'Failed to send OTP. Please try again.' });
   }
 
   res.json({
