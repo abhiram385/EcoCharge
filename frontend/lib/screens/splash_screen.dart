@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _init();
     // Hard backstop: whatever goes wrong in _init (a plugin call that hangs,
     // an exception we didn't anticipate), never trap the user on the splash.
-    _backstop = Timer(const Duration(seconds: 5), () => _goNext(loggedIn: false));
+    _backstop = Timer(const Duration(seconds: 4), () => _goNext(loggedIn: false));
     // Heartbeat: if this counter climbs but the screen never advances, the
     // Dart isolate is alive and something else is wedged (render/navigation).
     _heartbeat = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -44,19 +44,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _init() async {
-    await Future.delayed(const Duration(milliseconds: 1100));
-
+    // The session check races its own 2s cap; the splash shows for at least
+    // 1.4s regardless. Navigation never waits on anything longer than that.
+    final minSplash = Future<void>.delayed(const Duration(milliseconds: 1400));
+    bool loggedIn = false;
     try {
-      // isLoggedIn reads the token store; cap it and fall back to "logged out".
       final check = widget.sessionCheck ?? () => ApiService().isLoggedIn;
-      final loggedIn = await check().timeout(const Duration(seconds: 3));
-      _goNext(loggedIn: loggedIn);
+      loggedIn = await check().timeout(const Duration(seconds: 2));
     } catch (e) {
-      // Show it on screen (we have no other channel to a device we can't attach
-      // a debugger to); the backstop then moves on.
       debugPrint('SplashScreen: session check failed: $e');
       if (mounted) setState(() => _error = '$e');
     }
+    await minSplash;
+    _goNext(loggedIn: loggedIn);
   }
 
   void _goNext({required bool loggedIn}) {

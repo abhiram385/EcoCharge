@@ -42,19 +42,23 @@ void main() {
   testWidgets('surfaces the failure on screen before the backstop moves on', (tester) async {
     await tester.pumpWidget(_app(sessionCheck: () async => throw Exception('keystore boom')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.byType(SplashScreen), findsOneWidget);
     expect(find.textContaining('keystore boom'), findsOneWidget);
+
+    // Drain timers: let the backstop navigate so nothing outlives the test.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
   });
 
   testWidgets('goes to login when not logged in', (tester) async {
     await tester.pumpWidget(_app(sessionCheck: () async => false));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(seconds: 2));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.byType(PhoneEntryScreen), findsOneWidget);
   });
