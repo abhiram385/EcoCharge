@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -9,7 +10,30 @@ import 'providers/swap_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
-  runApp(const EcoChargeApp());
+  // Make build/runtime failures visible on screen instead of a blank freeze —
+  // this app gets demoed on devices we can't attach a debugger to.
+  ErrorWidget.builder = (FlutterErrorDetails details) => Material(
+        color: const Color(0xFF0B1B2B),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'EcoCharge hit an error:\n\n${details.exceptionAsString()}\n\n${details.stack}',
+              style: const TextStyle(color: Color(0xFFFFB4B4), fontSize: 12),
+            ),
+          ),
+        ),
+      );
+
+  runZonedGuarded(() {
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError: ${details.exceptionAsString()}');
+    };
+    runApp(const EcoChargeApp());
+  }, (error, stack) {
+    debugPrint('Uncaught zone error: $error\n$stack');
+  });
 }
 
 class EcoChargeApp extends StatelessWidget {

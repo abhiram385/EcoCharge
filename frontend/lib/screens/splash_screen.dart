@@ -9,7 +9,11 @@ import 'auth/phone_entry_screen.dart';
 import 'hub/landing_hub_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  /// Overridable so tests can drive the slow / failing paths without a
+  /// platform channel. Defaults to the real token-store check.
+  final Future<bool> Function()? sessionCheck;
+
+  const SplashScreen({super.key, this.sessionCheck});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -21,7 +25,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   bool _navigated = false;
   String? _error;
+  int _elapsed = 0;
   Timer? _backstop;
+  Timer? _heartbeat;
 
   @override
   void initState() {
@@ -30,19 +36,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Hard backstop: whatever goes wrong in _init (a plugin call that hangs,
     // an exception we didn't anticipate), never trap the user on the splash.
     _backstop = Timer(const Duration(seconds: 5), () => _goNext(loggedIn: false));
+    // Heartbeat: if this counter climbs but the screen never advances, the
+    // Dart isolate is alive and something else is wedged (render/navigation).
+    _heartbeat = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsed++);
+    });
   }
 
   Future<void> _init() async {
     await Future.delayed(const Duration(milliseconds: 1100));
 
     try {
-      // isLoggedIn reads flutter_secure_storage, which has been seen to hang or
-      // throw on some Android devices. Cap it and fall back to "logged out".
-      final loggedIn = await ApiService().isLoggedIn.timeout(const Duration(seconds: 3));
+      // isLoggedIn reads the token store; cap it and fall back to "logged out".
+      final check = widget.sessionCheck ?? () => ApiService().isLoggedIn;
+      final loggedIn = await check().timeout(const Duration(seconds: 3));
       _goNext(loggedIn: loggedIn);
     } catch (e) {
-      // Show it on screen for a couple of seconds (we have no other channel to
-      // a device we can't attach a debugger to); the backstop then moves on.
+      // Show it on screen (we have no other channel to a device we can't attach
+      // a debugger to); the backstop then moves on.
       debugPrint('SplashScreen: session check failed: $e');
       if (mounted) setState(() => _error = '$e');
     }
@@ -62,6 +73,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _backstop?.cancel();
+    _heartbeat?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -134,6 +146,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       textAlign: TextAlign.center,
                       style: GoogleFonts.nunitoSans(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
+                  ),
+                ],
+                if (_elapsed >= 3) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'starting… ${_elapsed}s',
+                    style: GoogleFonts.nunitoSans(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ],

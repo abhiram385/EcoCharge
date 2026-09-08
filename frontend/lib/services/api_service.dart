@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Thin wrapper around the EcoCharge REST API.
 /// Change [baseUrl] to point at your deployed backend, or use
@@ -11,13 +11,21 @@ class ApiService {
     defaultValue: 'https://ecocharge-j8fp.onrender.com',
   );
 
-  static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'ecocharge_auth_token';
 
-  Future<String?> get _token async => _storage.read(key: _tokenKey);
+  // Plain SharedPreferences rather than an encrypted store: this is a
+  // single-user demo app and a bearer JWT here isn't worth the reliability
+  // cost — flutter_secure_storage's first read was blocking app startup on
+  // some Android devices.
+  Future<String?> get _token async =>
+      (await SharedPreferences.getInstance()).getString(_tokenKey);
 
-  Future<void> saveToken(String token) => _storage.write(key: _tokenKey, value: token);
-  Future<void> clearToken() => _storage.delete(key: _tokenKey);
+  Future<void> saveToken(String token) async =>
+      (await SharedPreferences.getInstance()).setString(_tokenKey, token);
+
+  Future<void> clearToken() async =>
+      (await SharedPreferences.getInstance()).remove(_tokenKey);
+
   Future<bool> get isLoggedIn async => (await _token) != null;
 
   Future<Map<String, String>> _headers({bool auth = true}) async {

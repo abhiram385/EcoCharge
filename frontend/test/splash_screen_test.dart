@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -9,81 +8,67 @@ import 'package:ecocharge/providers/auth_provider.dart';
 import 'package:ecocharge/screens/splash_screen.dart';
 import 'package:ecocharge/screens/auth/phone_entry_screen.dart';
 
-const _secureStorageChannel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
-
-Widget _app() => ChangeNotifierProvider(
+Widget _app({Future<bool> Function()? sessionCheck}) => ChangeNotifierProvider(
       create: (_) => AuthProvider(),
-      child: const MaterialApp(home: SplashScreen()),
+      child: MaterialApp(home: SplashScreen(sessionCheck: sessionCheck)),
     );
 
-void _mockSecureStorage(Future<Object?> Function(MethodCall) handler) {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(_secureStorageChannel, handler);
-}
-
-/// Pump past the 1.1s delay, the 3s session-check timeout and the 5s backstop,
-/// without pumpAndSettle (the background animation never settles).
+/// Pump past the 1.1s delay, the 3s session-check timeout, the 5s backstop and
+/// the route transition — without pumpAndSettle (the background never settles).
 Future<void> _advancePastBackstop(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 1200));
   await tester.pump(const Duration(seconds: 5));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500)); // route transition
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_secureStorageChannel, null);
-  });
-
-  testWidgets('reaches the login screen when secure storage throws', (tester) async {
-    _mockSecureStorage((call) async {
-      throw PlatformException(code: 'KeystoreException', message: 'boom');
-    });
-
-    await tester.pumpWidget(_app());
+  testWidgets('reaches the login screen when the session check throws', (tester) async {
+    await tester.pumpWidget(_app(sessionCheck: () async => throw Exception('keystore boom')));
     await _advancePastBackstop(tester);
 
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(PhoneEntryScreen), findsOneWidget);
   });
 
-  testWidgets('reaches the login screen when secure storage hangs forever', (tester) async {
-    _mockSecureStorage((call) async {
-      await Completer<void>().future; // never completes
-      return null;
-    });
-
-    await tester.pumpWidget(_app());
+  testWidgets('reaches the login screen when the session check hangs forever', (tester) async {
+    await tester.pumpWidget(_app(sessionCheck: () => Completer<bool>().future));
     await _advancePastBackstop(tester);
 
     expect(find.byType(PhoneEntryScreen), findsOneWidget);
   });
 
-  testWidgets('surfaces the failure on screen before moving on', (tester) async {
-    _mockSecureStorage((call) async {
-      throw PlatformException(code: 'KeystoreException', message: 'boom');
-    });
-
-    await tester.pumpWidget(_app());
+  testWidgets('surfaces the failure on screen before the backstop moves on', (tester) async {
+    await tester.pumpWidget(_app(sessionCheck: () async => throw Exception('keystore boom')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1200));
     await tester.pump();
 
     expect(find.byType(SplashScreen), findsOneWidget);
-    expect(find.textContaining('KeystoreException'), findsOneWidget);
+    expect(find.textContaining('keystore boom'), findsOneWidget);
   });
 
-  testWidgets('goes straight to login on a fresh install (no stored token)', (tester) async {
-    _mockSecureStorage((call) async => null);
-
-    await tester.pumpWidget(_app());
+  testWidgets('goes to login when not logged in', (tester) async {
+    await tester.pumpWidget(_app(sessionCheck: () async => false));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1200));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(PhoneEntryScreen), findsOneWidget);
+  });
+
+  testWidgets('shows a heartbeat once startup passes 3s', (tester) async {
+    await tester.pumpWidget(_app(sessionCheck: () => Completer<bool>().future));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.textContaining('starting'), findsOneWidget);
+
+    // Let the backstop navigate away so no timers outlive the test.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }
