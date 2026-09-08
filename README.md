@@ -47,14 +47,26 @@ or unset) it logs the code to the console instead of sending SMS, so you can
 test without an SMS account — codes are also returned in the API response
 when `EXPOSE_OTP_IN_RESPONSE=true`.
 
-To send real texts, set these in `.env` and deploy config:
+To send real texts, use [SMS Gateway for Android](https://sms-gate.app) — no
+DLT, no KYC, sends from a phone's own SIM:
 
-```bash
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_FROM_NUMBER=+15005550006   # a number/sender ID provisioned in Twilio
-```
+1. Install the app on an Android phone that stays powered on with signal
+   (Play Store, F-Droid, or the GitHub APK).
+2. Enable **Cloud Server**, tap **Online**. The Cloud Server section then shows
+   a username and password.
+3. Set these in `.env` and deploy config:
+
+   ```bash
+   SMS_PROVIDER=smsgateway
+   SMS_GATEWAY_USER=<from the app>
+   SMS_GATEWAY_PASSWORD=<from the app>
+   ```
+
+Numbers are normalized to E.164 (`+91` is added to bare 10-digit numbers). In
+cloud mode the message passes through the sms-gate.app relay before the phone
+sends it; for a stricter setup run the app in local mode and set
+`SMS_GATEWAY_URL=http://<phone-ip>:8080/3rdparty/v1` (backend must reach that
+address).
 
 No code changes needed to switch — `request-otp` returns `502` if the SMS
 provider fails to send, so a failed delivery isn't reported to the client as
