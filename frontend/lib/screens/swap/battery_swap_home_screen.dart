@@ -36,7 +36,10 @@ class _BatterySwapHomeScreenState extends State<BatterySwapHomeScreen> {
       }
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (serviceEnabled) {
-        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 8),
+        );
         _center = LatLng(pos.latitude, pos.longitude);
       }
     } catch (_) {

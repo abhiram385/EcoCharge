@@ -48,7 +48,10 @@ class _LandingHubScreenState extends State<LandingHubScreen> {
       }
       if (await Geolocator.isLocationServiceEnabled()) {
         final pos = await Geolocator.getLastKnownPosition() ??
-            await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+            await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 8),
+            );
         lat = pos.latitude;
         lng = pos.longitude;
       }
@@ -56,7 +59,8 @@ class _LandingHubScreenState extends State<LandingHubScreen> {
       // Dashboard still works without location — just no "nearest" fallback.
     }
     try {
-      final data = await _api.getDashboard(lat: lat, lng: lng);
+      // Render's free tier cold-starts (~20s); don't spin forever if it's down.
+      final data = await _api.getDashboard(lat: lat, lng: lng).timeout(const Duration(seconds: 30));
       if (mounted) setState(() => _data = data);
     } catch (_) {
       // Leave _data null; the screen shows its own empty/error affordances.

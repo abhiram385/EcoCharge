@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -17,30 +19,49 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late final AnimationController _controller =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
 
+  bool _navigated = false;
+  String? _error;
+  Timer? _backstop;
+
   @override
   void initState() {
     super.initState();
     _init();
+    // Hard backstop: whatever goes wrong in _init (a plugin call that hangs,
+    // an exception we didn't anticipate), never trap the user on the splash.
+    _backstop = Timer(const Duration(seconds: 5), () => _goNext(loggedIn: false));
   }
 
   Future<void> _init() async {
     await Future.delayed(const Duration(milliseconds: 1100));
-    final api = ApiService();
-    final loggedIn = await api.isLoggedIn;
-    if (!mounted) return;
-    if (loggedIn) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LandingHubScreen()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PhoneEntryScreen()),
-      );
+
+    try {
+      // isLoggedIn reads flutter_secure_storage, which has been seen to hang or
+      // throw on some Android devices. Cap it and fall back to "logged out".
+      final loggedIn = await ApiService().isLoggedIn.timeout(const Duration(seconds: 3));
+      _goNext(loggedIn: loggedIn);
+    } catch (e) {
+      // Show it on screen for a couple of seconds (we have no other channel to
+      // a device we can't attach a debugger to); the backstop then moves on.
+      debugPrint('SplashScreen: session check failed: $e');
+      if (mounted) setState(() => _error = '$e');
     }
+  }
+
+  void _goNext({required bool loggedIn}) {
+    if (!mounted || _navigated) return;
+    _navigated = true;
+    _backstop?.cancel();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => loggedIn ? const LandingHubScreen() : const PhoneEntryScreen(),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    _backstop?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -104,6 +125,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   'Charge clean. Drive further.',
                   style: GoogleFonts.nunitoSans(color: AppColors.textSecondary, fontSize: 15, fontWeight: FontWeight.w600),
                 ),
+                if (_error != null) ...[
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunitoSans(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

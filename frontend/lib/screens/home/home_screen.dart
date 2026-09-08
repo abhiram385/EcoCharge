@@ -79,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!serviceEnabled) return;
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 8),
       );
       if (!mounted) return;
       _center = LatLng(pos.latitude, pos.longitude);
