@@ -262,6 +262,16 @@ class ApiService {
     return await _handle(res);
   }
 
+  // ---------- Device tracking (PoC) ----------
+
+  /// Latest GPS fix for a tracking device, or null if it hasn't reported yet.
+  Future<Map<String, dynamic>?> trackerLatest(String deviceId) async {
+    final res = await http.get(_uri('/api/tracker/$deviceId/latest'), headers: await _headers());
+    if (res.statusCode == 404) return null;
+    final data = await _handle(res);
+    return data['position'] as Map<String, dynamic>;
+  }
+
   // ---------- Wallet ----------
 
   Future<Map<String, dynamic>> getWallet() async {

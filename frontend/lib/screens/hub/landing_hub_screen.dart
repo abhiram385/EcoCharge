@@ -13,6 +13,7 @@ import '../swap/battery_swap_home_screen.dart';
 import '../vehicles/manage_vehicles_screen.dart';
 import '../wallet/wallet_screen.dart';
 import '../station/station_detail_screen.dart';
+import '../tracker/device_tracker_screen.dart';
 
 /// The screen shown right after login: a real dashboard rather than a bare
 /// nav menu — balance, vehicles with their live battery level, a rough CO2
@@ -227,6 +228,44 @@ class _LandingHubScreenState extends State<LandingHubScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Live vehicle tracking (PoC — Atlanta EL-440)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const DeviceTrackerScreen()),
+                        ),
+                        child: GlassPanel(
+                          radius: 20,
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(gradient: AppColors.orbGradient, shape: BoxShape.circle),
+                                child: const Icon(Icons.my_location_rounded, color: Colors.white, size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Live vehicle tracking',
+                                        style: GoogleFonts.baloo2(
+                                            color: AppColors.deepAzure, fontWeight: FontWeight.w800, fontSize: 15)),
+                                    Text('See your tracked vehicle on the map',
+                                        style: GoogleFonts.nunitoSans(
+                                            color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
