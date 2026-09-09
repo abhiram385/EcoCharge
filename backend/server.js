@@ -18,7 +18,9 @@ const app = express();
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+// Keep the raw body around so webhook signatures can be verified byte-for-byte
+// (see routes/tracker.js — the SMS Gateway HMAC-signs its webhook payloads).
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ecocharge-backend' }));

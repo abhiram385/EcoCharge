@@ -8,10 +8,11 @@ import '../../services/api_service.dart';
 import '../../widgets/aero/glass_panel.dart';
 
 /// PoC: shows the live position of the Atlanta EL-440 tracker on a map.
-/// Positions are fed into the backend by tools/trackerFeeder.js today, and
-/// by the ATL protocol decoder once Atlanta provides the spec — this screen
-/// doesn't change either way.
-const kDemoTrackerDeviceId = 'EL440-DEMO';
+/// Positions reach the backend from GETGPS SMS replies (via tools/pollEl440.js
+/// + the /api/tracker/sms-hook webhook) today, and from the GPRS decoder once
+/// Atlanta provides the ATL protocol spec — this screen doesn't change either
+/// way. The device is keyed by its IMEI.
+const kDemoTrackerDeviceId = '864688053456114';
 
 class DeviceTrackerScreen extends StatefulWidget {
   final String deviceId;
