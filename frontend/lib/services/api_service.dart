@@ -279,11 +279,28 @@ class ApiService {
     return await _handle(res);
   }
 
-  Future<Map<String, dynamic>> topUpWallet(double amount, {String? reference}) async {
+  /// Step 1 of a top-up: opens a Razorpay order server-side. Nothing is
+  /// credited yet — returns {orderId, amount, keyId} for the Checkout SDK.
+  Future<Map<String, dynamic>> createTopupOrder(double amount) async {
     final res = await http.post(
-      _uri('/api/wallet/topup'),
+      _uri('/api/wallet/topup/order'),
       headers: await _headers(),
-      body: jsonEncode({'amount': amount, 'reference': reference}),
+      body: jsonEncode({'amount': amount}),
+    );
+    return await _handle(res);
+  }
+
+  /// Step 2: hands the Checkout SDK's result to the backend, which verifies
+  /// the payment signature before crediting the wallet.
+  Future<Map<String, dynamic>> verifyTopup({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    final res = await http.post(
+      _uri('/api/wallet/topup/verify'),
+      headers: await _headers(),
+      body: jsonEncode({'orderId': orderId, 'paymentId': paymentId, 'signature': signature}),
     );
     return await _handle(res);
   }
