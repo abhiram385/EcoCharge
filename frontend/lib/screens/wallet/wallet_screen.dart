@@ -66,10 +66,11 @@ class _WalletScreenState extends State<WalletScreen> {
                     ? null
                     : () async {
                         Navigator.pop(ctx);
-                        final ok = await context.read<WalletProvider>().topUp(selected!.toDouble());
+                        final wallet = context.read<WalletProvider>();
+                        final ok = await wallet.topUp(selected!.toDouble());
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(ok ? 'Added ₹$selected to wallet' : 'Top-up failed')),
+                          SnackBar(content: Text(ok ? 'Added ₹$selected to wallet' : (wallet.error ?? 'Top-up failed'))),
                         );
                       },
               ),
